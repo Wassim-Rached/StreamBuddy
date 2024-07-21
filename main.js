@@ -208,7 +208,7 @@ async function getStreamByShareType() {
 
 function getStandbyStream() {
   resetMute();
-  if (standby_video.mozCaptureStream()) {
+  if (standby_video.mozCaptureStream) {
     return standby_video.mozCaptureStream();
   }
   return standby_video.captureStream();
