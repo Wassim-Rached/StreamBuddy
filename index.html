@@ -46,29 +46,13 @@
         <input type="text" class="form-control" id="peer-id" />
       </div>
       <div class="d-flex gap-2 mb-2">
-        <button disabled id="call-btn" class="btn btn-primary" onclick="call()">
-          Call
-        </button>
-        <button
-          disabled
-          id="hangup-btn"
-          class="btn btn-danger"
-          onclick="hangup()"
-        >
-          Hangup
-        </button>
-        <button
-          disabled
-          id="mute-btn"
-          class="btn btn-secondary"
-          onclick="toggleMute()"
-        >
-          Mute
-        </button>
+        <button disabled id="call-btn" class="btn btn-primary">Call</button>
+        <button disabled id="hangup-btn" class="btn btn-danger">Hangup</button>
+        <button disabled id="mute-btn" class="btn btn-secondary">Mute</button>
       </div>
       <div class="form-group mb-3">
         <label for="share-select">Choose what to share:</label>
-        <select class="form-select" id="share-select" onchange="toggleStream()">
+        <select class="form-select" id="share-select">
           <option value="none">Nothing</option>
           <option value="camera">Camera</option>
           <option value="screen">Screen</option>
@@ -106,6 +90,7 @@
       src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"
       defer
     ></script>
+    <script src="utils.js" defer></script>
     <script src="main.js" defer></script>
   </body>
 </html>

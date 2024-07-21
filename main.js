@@ -1,45 +1,35 @@
 const peerId_input = document.getElementById("peer-id");
 const call_btn = document.getElementById("call-btn");
 const myId_input = document.getElementById("my-id");
-const connectionStatus = document.getElementById("connection-status");
 const localVideo = document.getElementById("local-video");
 const remoteVideo = document.getElementById("remote-video");
 const hangup_btn = document.getElementById("hangup-btn");
-const shareSelect = document.getElementById("share-select");
-const standbyVideo = document.getElementById("standby-video");
-const copyBtn = document.getElementById("copy-btn");
-const muteBtn = document.getElementById("mute-btn");
-const callsDiv = document.getElementById("calls");
-const alertsContainer = document.getElementById("alerts-container");
+const shareChoice_select = document.getElementById("share-select");
+const standby_video = document.getElementById("standby-video");
+const mute_btn = document.getElementById("mute-btn");
+const calls_div = document.getElementById("calls");
 
-peerId_input.oninput = () => {
-  if (!peerId_input.value || peerId_input.value === "") {
-    call_btn.disabled = true;
-    return;
-  }
+peerId_input.addEventListener("input", validatePeerIdInput);
 
-  console.log(peer && peer.id && peer.id == peerId_input.value);
+// varibles
+let peer; // represents the current user
+let currentStream; // represents the current stream
+let isMuted; // represents the current mute status
 
-  if (peer && peer.id && peer.id == peerId_input.value) {
-    call_btn.disabled = true;
-    return;
-  }
+let incomingCalls; // represents the incoming calls list
+let outgoingCalls; // represents the outgoing calls list
 
-  call_btn.disabled = false;
-};
+// event listeners
+window.addEventListener("load", init);
+call_btn.addEventListener("click", call);
+hangup_btn.addEventListener("click", hangup);
+mute_btn.addEventListener("click", toggleMute);
+shareChoice_select.addEventListener("change", toggleStream);
 
-let peer;
-let currentStream;
-let isMuted;
-
-let incomingCalls;
-let outgoingCalls;
-
-window.onload = init;
-
+// core logic functions
 async function init() {
   peer = new Peer();
-  shareSelect.value = "none";
+  shareChoice_select.value = "none";
   currentStream = await getStreamByShareType();
   isMuted = false;
   incomingCalls = new Map();
@@ -61,7 +51,7 @@ async function call() {
     currentStream = await getStreamByShareType();
   }
   gotLocalStream(currentStream);
-  const call = peer.call(getPeerId(), currentStream);
+  const call = peer.call(peerId_input.value, currentStream);
 
   call.on("stream", (stream) => {
     gotRemoteStream(stream);
@@ -79,203 +69,6 @@ async function call() {
     updateConnectionStatus("Connection closed");
     hangup();
   });
-}
-
-function getPeerId() {
-  return peerId_input.value;
-}
-
-function updateConnectionStatus(status) {
-  connectionStatus.innerText = status;
-  connectionStatus.className = "alert text-center";
-  if (status === "Connected") {
-    connectionStatus.classList.add("alert-success");
-  } else if (status === "Connection closed") {
-    connectionStatus.classList.add("alert-danger");
-  } else {
-    connectionStatus.classList.add("alert-info");
-  }
-}
-
-function gotLocalStream(stream) {
-  localVideo.srcObject = stream;
-}
-
-function gotRemoteStream(stream) {
-  remoteVideo.srcObject = stream;
-}
-
-async function toggleStream() {
-  const shareType = shareSelect.value;
-
-  if (currentStream) {
-    currentStream.getTracks().forEach((track) => track.stop());
-  }
-
-  currentStream = await getStreamByShareType();
-  gotLocalStream(currentStream);
-
-  Object.values(peer.connections).forEach((connection) => {
-    connection.forEach((conn) => {
-      if (!conn.peerConnection) return;
-      conn.peerConnection.getSenders().forEach((sender) => {
-        if (!sender.track) return;
-
-        if (sender.track.kind === "video") {
-          sender.replaceTrack(currentStream.getVideoTracks()[0]);
-        } else if (sender.track.kind === "audio") {
-          sender.replaceTrack(currentStream.getAudioTracks()[0]);
-        }
-      });
-    });
-  });
-}
-
-async function getUserMediaStream() {
-  const res = await navigator.mediaDevices.getUserMedia({
-    video: true,
-    audio: true,
-  });
-  resetMute();
-  muteBtn.disabled = false;
-  return res;
-}
-
-async function getDisplayMediaStream() {
-  const res = await navigator.mediaDevices.getDisplayMedia({
-    video: true,
-    audio: true,
-  });
-  resetMute();
-  return res;
-}
-
-function hangup() {
-  // Object.values(peer.connections).forEach((connection) => {
-  //   connection.forEach((conn) => {
-  //     conn.close();
-  //   });
-  // });
-
-  const activeCall = getActiveCall();
-  if (activeCall) {
-    activeCall.close();
-  }
-
-  updateConnectionStatus("idle");
-  localVideo.srcObject = getStandbyStream();
-  remoteVideo.srcObject = null;
-  if (currentStream) {
-    currentStream.getTracks().forEach((track) => track.stop());
-    currentStream = null;
-  }
-
-  hangup_btn.disabled = true;
-
-  shareSelect.value = "none";
-  peerId_input.oninput();
-  isCurrenlyInCall = false;
-}
-
-async function getStreamByShareType() {
-  const shareType = shareSelect.value;
-  if (shareType === "camera") {
-    return await getUserMediaStream();
-  } else if (shareType === "screen") {
-    return await getDisplayMediaStream();
-  } else if (shareType === "none") {
-    return getStandbyStream();
-  } else {
-    console.error("Invalid share type");
-    return await getUserMediaStream();
-  }
-}
-
-function getStandbyStream() {
-  resetMute();
-  if (standbyVideo.mozCaptureStream()) {
-    return standbyVideo.mozCaptureStream();
-  }
-  return standbyVideo.captureStream();
-}
-
-copyBtn.addEventListener("click", () => {
-  navigator.clipboard
-    .writeText(myId_input.value)
-    .then(() => {
-      copyBtn.innerText = "Copied!";
-      setTimeout(() => {
-        copyBtn.innerText = "Copy Link";
-      }, 2000);
-    })
-    .catch((err) => {
-      console.log("Error copying text: ", err);
-    });
-});
-
-function toggleMute() {
-  if (currentStream) {
-    const audioTracks = currentStream.getAudioTracks();
-    if (audioTracks.length > 0) {
-      const track = audioTracks[0];
-
-      // Stop the track if muted, otherwise restart it
-      if (isMuted) {
-        track.enabled = true; // Unmute
-      } else {
-        track.enabled = false; // Mute
-      }
-
-      isMuted = !isMuted;
-      muteBtn.innerText = isMuted ? "Unmute" : "Mute";
-
-      // Update the track in the peer connections
-      Object.values(peer.connections).forEach((connection) => {
-        connection.forEach((conn) => {
-          if (!conn.peerConnection) return;
-          conn.peerConnection.getSenders().forEach((sender) => {
-            if (sender.track && sender.track.kind === "audio") {
-              // Replace track with the updated track (muted/unmuted)
-              sender.replaceTrack(track);
-            }
-          });
-        });
-      });
-    }
-  }
-}
-
-function renderCalls() {
-  callsDiv.innerHTML = "";
-  Array.from(incomingCalls.values()).forEach((call) => {
-    const callDiv = document.createElement("div");
-    callDiv.innerHTML = `
-<div class="container mt-4">
-	<div class="row">
-		<div class="col-md-6 col-lg-4">
-			<div class="card shadow-sm mb-3">
-				<div class="card-body">
-					<h5 class="card-title mb-3 fs-6 text-center">${call.peer}</h5>
-					<button class="btn btn-success w-100 mb-2" onclick="answerCall('${call.peer}')">Answer</button>
-					<button class="btn btn-danger w-100" onclick="rejectCall('${call.peer}')">Reject</button>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
-`;
-    callsDiv.appendChild(callDiv);
-  });
-}
-
-function addCall(call) {
-  incomingCalls.set(call.peer, call);
-  renderCalls();
-}
-
-function removeCall(peerId) {
-  incomingCalls.delete(peerId);
-  renderCalls();
 }
 
 async function answerCall(callPeerId) {
@@ -326,10 +119,169 @@ async function answerCall(callPeerId) {
   removeCall(callPeerId);
 }
 
+function hangup() {
+  const activeCall = getActiveCall();
+  if (activeCall) {
+    activeCall.close();
+  }
+
+  updateConnectionStatus("idle");
+  localVideo.srcObject = getStandbyStream();
+  remoteVideo.srcObject = null;
+  if (currentStream) {
+    currentStream.getTracks().forEach((track) => track.stop());
+    currentStream = null;
+  }
+
+  hangup_btn.disabled = true;
+
+  shareChoice_select.value = "none";
+  validatePeerIdInput();
+  isCurrenlyInCall = false;
+}
+
+// stream related functions
+function gotLocalStream(stream) {
+  localVideo.srcObject = stream;
+}
+
+function gotRemoteStream(stream) {
+  remoteVideo.srcObject = stream;
+}
+
+async function toggleStream() {
+  if (currentStream) {
+    currentStream.getTracks().forEach((track) => track.stop());
+  }
+
+  currentStream = await getStreamByShareType();
+  gotLocalStream(currentStream);
+
+  Object.values(peer.connections).forEach((connection) => {
+    connection.forEach((conn) => {
+      if (!conn.peerConnection) return;
+      conn.peerConnection.getSenders().forEach((sender) => {
+        if (!sender.track) return;
+
+        if (sender.track.kind === "video") {
+          sender.replaceTrack(currentStream.getVideoTracks()[0]);
+        } else if (sender.track.kind === "audio") {
+          sender.replaceTrack(currentStream.getAudioTracks()[0]);
+        }
+      });
+    });
+  });
+}
+
+async function getUserMediaStream() {
+  const res = await navigator.mediaDevices.getUserMedia({
+    video: true,
+    audio: true,
+  });
+  resetMute();
+  mute_btn.disabled = false;
+  return res;
+}
+
+async function getDisplayMediaStream() {
+  const res = await navigator.mediaDevices.getDisplayMedia({
+    video: true,
+    audio: true,
+  });
+  resetMute();
+  return res;
+}
+
+async function getStreamByShareType() {
+  const shareType = shareChoice_select.value;
+  if (shareType === "camera") {
+    return await getUserMediaStream();
+  } else if (shareType === "screen") {
+    return await getDisplayMediaStream();
+  } else if (shareType === "none") {
+    return getStandbyStream();
+  } else {
+    console.error("Invalid share type");
+    return await getUserMediaStream();
+  }
+}
+
+function getStandbyStream() {
+  resetMute();
+  if (standby_video.mozCaptureStream()) {
+    return standby_video.mozCaptureStream();
+  }
+  return standby_video.captureStream();
+}
+
+function toggleMute() {
+  if (currentStream) {
+    const audioTracks = currentStream.getAudioTracks();
+    if (audioTracks.length > 0) {
+      const track = audioTracks[0];
+
+      // Stop the track if muted, otherwise restart it
+      if (isMuted) {
+        track.enabled = true; // Unmute
+      } else {
+        track.enabled = false; // Mute
+      }
+
+      isMuted = !isMuted;
+      mute_btn.innerText = isMuted ? "Unmute" : "Mute";
+
+      Object.values(peer.connections).forEach((connection) => {
+        connection.forEach((conn) => {
+          if (!conn.peerConnection) return;
+          conn.peerConnection.getSenders().forEach((sender) => {
+            if (sender.track && sender.track.kind === "audio") {
+              sender.replaceTrack(track);
+            }
+          });
+        });
+      });
+    }
+  }
+}
+
 function resetMute() {
   isMuted = false;
-  muteBtn.innerText = "Mute";
-  muteBtn.disabled = true;
+  mute_btn.innerText = "Mute";
+  mute_btn.disabled = true;
+}
+
+// Call related functions
+function renderCalls() {
+  calls_div.innerHTML = "";
+  Array.from(incomingCalls.values()).forEach((call) => {
+    const callDiv = document.createElement("div");
+    callDiv.innerHTML = `
+		<div class="container mt-4">
+			<div class="row">
+				<div class="col-md-6 col-lg-4">
+					<div class="card shadow-sm mb-3">
+						<div class="card-body">
+							<h5 class="card-title mb-3 fs-6 text-center">${call.peer}</h5>
+							<button class="btn btn-success w-100 mb-2" onclick="answerCall('${call.peer}')">Answer</button>
+							<button class="btn btn-danger w-100" onclick="rejectCall('${call.peer}')">Reject</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	`;
+    calls_div.appendChild(callDiv);
+  });
+}
+
+function addCall(call) {
+  incomingCalls.set(call.peer, call);
+  renderCalls();
+}
+
+function removeCall(peerId) {
+  incomingCalls.delete(peerId);
+  renderCalls();
 }
 
 function getActiveCall() {
@@ -347,24 +299,7 @@ function getActiveCall() {
       }
     }
   }
-  return null; // No active call found
-}
-
-function countActiveCalls() {
-  let count = 0;
-  for (const [peerId, connections] of Object.entries(peer.connections)) {
-    for (const conn of connections) {
-      if (conn.peerConnection) {
-        const senders = conn.peerConnection.getSenders();
-        for (const sender of senders) {
-          if (sender.track && sender.track.kind === "video") {
-            count++;
-          }
-        }
-      }
-    }
-  }
-  return count;
+  return null;
 }
 
 function cancelAllOutgoingCalls() {
@@ -373,20 +308,4 @@ function cancelAllOutgoingCalls() {
   }
   outgoingCalls.clear();
   renderCalls();
-}
-
-function pushAlert(message, type = "info") {
-  const bootstrapAlert = `
-	<div class="alert alert-${type} alert-dismissible fade show fs-7" role="alert">
-	  ${message}
-	</div>
-  `;
-  alertsContainer.innerHTML += bootstrapAlert;
-  // remove the last alert after 5 seconds
-  setTimeout(() => {
-    const lastAlert = alertsContainer.lastElementChild;
-    if (lastAlert) {
-      lastAlert.remove();
-    }
-  }, 5000);
 }
