@@ -3,13 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <meta
+      name="description"
+      content="StreamBuddy: A simple and modern video calling application that allows users to share their camera or screen with others. Secure and user-friendly interface."
+    />
+    <meta name="author" content="Wassim Rached" />
+    <title>StreamBuddy</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
     />
-
+    <link rel="icon" href="icon.ico" type="image/x-icon" />
     <style>
+      body {
+        background-color: #f8f9fa;
+        font-family: Arial, sans-serif;
+      }
+
       #local-video,
       #remote-video {
         width: 100%;
@@ -19,59 +29,153 @@
       #videos {
         display: flex;
         gap: 20px;
+        flex-wrap: wrap;
+      }
+
+      .video-container {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .btn-fullscreen {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      .fullscreen {
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+      }
+
+      .alert-custom {
+        border-radius: 8px;
+      }
+
+      .btn-custom {
+        border-radius: 8px;
+      }
+
+      .form-select-custom {
+        border-radius: 8px;
+      }
+
+      .btn-outline-secondary {
+        border-radius: 8px;
+      }
+
+      .video-container video {
+        border-radius: 8px;
+        border: 2px solid #dee2e6;
+      }
+
+      .video-container {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .video-container .btn-fullscreen {
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        #videos {
+          flex-direction: column;
+        }
+
+        .video-container {
+          width: 100%;
+          max-height: 200px;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="connection-status" class="alert alert-info text-center">idle</div>
-    <div class="container mt-3">
+    <div id="connection-status" class="alert alert-info text-center mb-4">
+      idle
+    </div>
+    <div class="container mt-4">
       <div id="alerts-container"></div>
-      <div class="alert alert-warning text-center mt-2" role="alert">
+      <div
+        class="alert alert-warning alert-custom text-center mb-4"
+        role="alert"
+      >
         Warning: Sharing your ID with others allows them to call you. Please
         only share your ID with trusted individuals to avoid unwanted calls and
         potential privacy breaches. Always verify the identity of the caller
         before answering.
       </div>
       <div class="form-group mb-3">
-        <label for="my-id">My ID: </label>
+        <label for="my-id" class="form-label">My ID: </label>
         <div class="input-group">
           <input disabled type="text" class="form-control" id="my-id" />
-          <button class="btn btn-outline-secondary" id="copy-btn" type="button">
+          <button
+            class="btn btn-outline-secondary btn-custom"
+            id="copy-btn"
+            type="button"
+          >
             Copy Link
           </button>
         </div>
       </div>
       <div class="form-group mb-3">
-        <label for="peer-id">Peer ID: </label>
+        <label for="peer-id" class="form-label">Peer ID: </label>
         <input type="text" class="form-control" id="peer-id" />
       </div>
-      <div class="d-flex gap-2 mb-2">
-        <button disabled id="call-btn" class="btn btn-primary">Call</button>
-        <button disabled id="hangup-btn" class="btn btn-danger">Hangup</button>
-        <button disabled id="mute-btn" class="btn btn-secondary">Mute</button>
+      <div class="d-flex gap-2 mb-3">
+        <button disabled id="call-btn" class="btn btn-primary btn-custom">
+          Call
+        </button>
+        <button disabled id="hangup-btn" class="btn btn-danger btn-custom">
+          Hangup
+        </button>
+        <button disabled id="mute-btn" class="btn btn-secondary btn-custom">
+          Mute
+        </button>
       </div>
       <div class="form-group mb-3">
-        <label for="share-select">Choose what to share:</label>
-        <select class="form-select" id="share-select">
+        <label for="share-select" class="form-label"
+          >Choose what to share:</label
+        >
+        <select class="form-select form-select-custom" id="share-select">
           <option value="none">Nothing</option>
           <option value="camera">Camera</option>
           <option value="screen">Screen</option>
         </select>
       </div>
-      <div id="videos" class="mt-4">
-        <video
-          id="local-video"
-          class="border rounded"
-          playsinline
-          autoplay
-          muted
-        ></video>
-        <video
-          id="remote-video"
-          class="border rounded"
-          playsinline
-          autoplay
-        ></video>
+      <div id="videos" class="video-container mt-4">
+        <div class="video-container">
+          <video
+            id="local-video"
+            class="border rounded shadow-sm"
+            playsinline
+            autoplay
+            muted
+          ></video>
+          <button class="btn btn-fullscreen" onclick="toggleFullScreen()">
+            🔲
+          </button>
+        </div>
+        <div class="video-container">
+          <video
+            id="remote-video"
+            class="border rounded shadow-sm"
+            playsinline
+            autoplay
+          ></video>
+          <button class="btn btn-fullscreen" onclick="toggleFullScreen()">
+            🔲
+          </button>
+        </div>
         <video
           id="standby-video"
           style="display: none"
