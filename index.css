@@ -1,0 +1,164 @@
+body {
+  background-color: #f8f9fa;
+  font-family: Arial, sans-serif;
+}
+
+#local-video,
+#remote-video {
+  width: 100%;
+  max-height: 300px;
+}
+
+#videos {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.video-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.btn-fullscreen {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.fullscreen {
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+}
+
+.alert-custom {
+  border-radius: 8px;
+}
+
+.btn-custom {
+  border-radius: 8px;
+}
+
+.form-select-custom {
+  border-radius: 8px;
+}
+
+.btn-outline-secondary {
+  border-radius: 8px;
+}
+
+.video-container video {
+  width: 100%;
+  border-radius: 8px;
+  border: 2px solid #dee2e6;
+}
+
+.video-container {
+  flex: 1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.video-container .btn-fullscreen {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  #videos {
+    flex-direction: column;
+  }
+
+  .video-container {
+    width: 100%;
+    max-height: 800px;
+  }
+}
+
+.chat-container {
+  margin: auto;
+  font-family: Arial, sans-serif;
+}
+
+.chat-box {
+  height: 350px;
+  background-color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.chat-message {
+  padding: 10px 15px;
+  margin: 5px 0;
+  border-radius: 15px;
+  width: fit-content;
+  max-width: 70%;
+  word-wrap: break-word;
+}
+
+.chat-message.me {
+  background-color: #007bff;
+  color: #ffffff;
+  text-align: right;
+  margin-left: auto;
+}
+
+.chat-message.other {
+  background-color: #e9ecef;
+  color: #000000;
+  text-align: left;
+  margin-right: auto;
+}
+
+.input-group .form-control {
+  box-shadow: none;
+  border: 1px solid #ced4da;
+}
+
+.input-group .btn-primary {
+  background-color: #007bff;
+  border: none;
+  box-shadow: none;
+}
+
+.input-group .btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.file-transfer-container {
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.file-transfer-container h4 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.file-transfer-container #file-input {
+  flex: 1;
+}
+
+#file-list {
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+#file-list a {
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #e9ecef;
+  margin-bottom: 0.5rem;
+}

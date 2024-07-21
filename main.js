@@ -1,3 +1,5 @@
+// TODO : DISABLE FILE
+
 const peerId_input = document.getElementById("peer-id");
 const call_btn = document.getElementById("call-btn");
 const myId_input = document.getElementById("my-id");
@@ -8,13 +10,27 @@ const shareChoice_select = document.getElementById("share-select");
 const standby_video = document.getElementById("standby-video");
 const mute_btn = document.getElementById("mute-btn");
 const calls_div = document.getElementById("calls");
+const sendMessage_btn = document.getElementById("send-message-btn");
+const chatMessage_input = document.getElementById("chat-message-input");
+const sendFile_btn = document.getElementById("send-file-btn");
+const fileInput = document.getElementById("file-input");
 
 peerId_input.addEventListener("input", validatePeerIdInput);
+chatMessage_input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    sendMessage_btn.click();
+  }
+});
+sendMessage_btn.addEventListener("click", (e) => {
+  chatChannel.send(chatMessage_input.value);
+  pushChatMessage(chatMessage_input.value, true);
+});
 
 // varibles
 let peer; // represents the current user
 let currentStream; // represents the current stream
 let isMuted; // represents the current mute status
+let chatChannel; // represents the chat channel
 
 let incomingCalls; // represents the incoming calls list
 let outgoingCalls; // represents the outgoing calls list
@@ -25,6 +41,7 @@ call_btn.addEventListener("click", call);
 hangup_btn.addEventListener("click", hangup);
 mute_btn.addEventListener("click", toggleMute);
 shareChoice_select.addEventListener("change", toggleStream);
+sendFile_btn.addEventListener("click", sendFile);
 
 // core logic functions
 async function init() {
@@ -34,6 +51,7 @@ async function init() {
   isMuted = false;
   incomingCalls = new Map();
   outgoingCalls = new Map();
+  chatChannel = undefined;
 
   gotLocalStream(currentStream);
 
@@ -43,6 +61,11 @@ async function init() {
 
   peer.on("call", async (call) => {
     addCall(call);
+  });
+
+  peer.on("connection", (conn) => {
+    chatChannel = conn;
+    setupChatChanel(chatChannel);
   });
 }
 
@@ -56,6 +79,8 @@ async function call() {
   call.on("stream", (stream) => {
     gotRemoteStream(stream);
     updateConnectionStatus("Connected");
+    chatChannel = peer.connect(call.peer);
+    setupChatChanel(chatChannel);
     hangup_btn.disabled = false;
   });
 
@@ -135,9 +160,9 @@ function hangup() {
 
   hangup_btn.disabled = true;
 
+  closeChatChannel();
   shareChoice_select.value = "none";
   validatePeerIdInput();
-  isCurrenlyInCall = false;
 }
 
 // stream related functions
@@ -253,23 +278,38 @@ function resetMute() {
 // Call related functions
 function renderCalls() {
   calls_div.innerHTML = "";
-  Array.from(incomingCalls.values()).forEach((call) => {
+  const arr = Array.from(incomingCalls.values());
+  if (arr.length === 0) {
+    calls_div.innerHTML =
+      "<div class='alert alert-info'>No incoming calls at the moment.</div>";
+  }
+  arr.forEach((call) => {
     const callDiv = document.createElement("div");
     callDiv.innerHTML = `
-		<div class="container mt-4">
-			<div class="row">
-				<div class="col-md-6 col-lg-4">
-					<div class="card shadow-sm mb-3">
-						<div class="card-body">
-							<h5 class="card-title mb-3 fs-6 text-center">${call.peer}</h5>
-							<button class="btn btn-success w-100 mb-2" onclick="answerCall('${call.peer}')">Answer</button>
-							<button class="btn btn-danger w-100" onclick="rejectCall('${call.peer}')">Reject</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	`;
+      <div class="card" style="width: 300px">
+        <div class="card-body d-flex flex-column align-items-center">
+          <div id="caller-id" class="fw-bold text-center fs-7 mb-3">${call.peer}</div>
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-success btn-sm"
+              id="answer-btn"
+              title="Answer"
+              onClick="answerCall('${call.peer}')"
+            >
+              Answer
+            </button>
+            <button
+              class="btn btn-danger btn-sm"
+              id="reject-btn"
+              title="Reject"
+              onClick="removeCall('${call.peer}')"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
     calls_div.appendChild(callDiv);
   });
 }
@@ -308,4 +348,74 @@ function cancelAllOutgoingCalls() {
   }
   outgoingCalls.clear();
   renderCalls();
+}
+
+function handleChannelData(data) {
+  switch (data.type) {
+    case "chat-message":
+      pushChatMessage(data.message, false);
+      break;
+    case "file":
+      receiveFile(data.file, data.fileName);
+      break;
+    default:
+      console.log("Unknown message type", data);
+  }
+}
+
+// file related functions
+function sendFile() {
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    chatChannel.send({
+      type: "file",
+      file: reader.result,
+      fileName: file.name,
+    });
+  };
+  reader.readAsArrayBuffer(file);
+  // clear the input
+  fileInput.value = null;
+}
+
+function receiveFile(file, fileName) {
+  const blob = new Blob([file]);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.textContent = fileName;
+  document.getElementById("file-list").appendChild(link);
+}
+
+// Chat related functions
+function setupChatChanel(chatChannel) {
+  chatChannel.on("open", () => {
+    console.log("Chat channel open");
+    sendMessage_btn.disabled = false;
+    chatMessage_input.disabled = false;
+
+    chatChannel.on("data", handleChannelData);
+
+    chatChannel.on("close", () => {
+      closeChatChannel();
+    });
+
+    chatChannel.on("error", (err) => {
+      console.log("Chat error", err);
+    });
+  });
+}
+
+function closeChatChannel() {
+  if (chatChannel) {
+    chatChannel.close();
+  }
+  clearChatMessages();
+  // disable chat input and btn
+  sendMessage_btn.disabled = true;
+  chatMessage_input.disabled = true;
 }

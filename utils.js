@@ -1,6 +1,35 @@
 const alertsContainer = document.getElementById("alerts-container");
 const copy_btn = document.getElementById("copy-btn");
 const connectionStatus = document.getElementById("connection-status");
+const chatBox = document.getElementById("chat-box");
+
+function pushChatMessage(message, byMe = false) {
+  if (!message || message.trim() === "") return;
+
+  // Create a div element for the chat message
+  const chatMessage = document.createElement("div");
+  chatMessage.className = `chat-message ${byMe ? "me" : "other"}`;
+
+  // Create a div element for the chat message content
+  const chatMessageContent = document.createElement("div");
+  chatMessageContent.className = "chat-message-content";
+  chatMessageContent.textContent = message;
+
+  // Append the content to the message div
+  chatMessage.appendChild(chatMessageContent);
+
+  // Append the message div to the chat box
+  chatBox.appendChild(chatMessage);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  if (byMe) {
+    chatMessage_input.value = "";
+  }
+}
+
+function clearChatMessages() {
+  chatBox.innerHTML = "";
+}
 
 function pushAlert(message, type = "info") {
   const bootstrapAlert = `
