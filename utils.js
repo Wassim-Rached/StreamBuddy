@@ -2,6 +2,9 @@ const alertsContainer = document.getElementById("alerts-container");
 const copy_btn = document.getElementById("copy-btn");
 const connectionStatus = document.getElementById("connection-status");
 const chatBox = document.getElementById("chat-box");
+const fileList = document.getElementById("file-list");
+const localVideo = document.getElementById("local-video");
+const remoteVideo = document.getElementById("remote-video");
 
 function pushChatMessage(message, byMe = false) {
   if (!message || message.trim() === "") return;
@@ -87,3 +90,89 @@ copy_btn.addEventListener("click", () => {
       console.log("Error copying text: ", err);
     });
 });
+
+function addFileToList(url, fileName) {
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.textContent = fileName;
+  fileList.appendChild(link);
+}
+
+function clearFileList() {
+  fileList.innerHTML = "";
+}
+
+// video related functions
+function setLocalVideoStream(stream) {
+  localVideo.srcObject = stream;
+}
+
+function setRemoteVideoStream(stream) {
+  remoteVideo.srcObject = stream;
+}
+
+function toggleFullScreen(videoId) {
+  const videoElement = document.getElementById(videoId);
+  const button = videoElement.nextElementSibling;
+
+  if (!document.fullscreenElement) {
+    if (videoElement.requestFullscreen) {
+      videoElement.requestFullscreen();
+    } else if (videoElement.mozRequestFullScreen) {
+      // Firefox
+      videoElement.mozRequestFullScreen();
+    } else if (videoElement.webkitRequestFullscreen) {
+      // Chrome, Safari and Opera
+      videoElement.webkitRequestFullscreen();
+    } else if (videoElement.msRequestFullscreen) {
+      // IE/Edge
+      videoElement.msRequestFullscreen();
+    }
+    button.textContent = "Exit Full Screen";
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      // Firefox
+      document.mozCancelFullScreen();
+    } else if (document.webkitExitFullscreen) {
+      // Chrome, Safari and Opera
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      // IE/Edge
+      document.msExitFullscreen();
+    }
+    button.textContent = "Full Screen";
+  }
+}
+
+// function toggleRemoteVideoFullScreen() {
+//   if (!document.fullscreenElement) {
+//     if (remoteVideo.requestFullscreen) {
+//       remoteVideo.requestFullscreen();
+//     } else if (remoteVideo.mozRequestFullScreen) {
+//       // Firefox
+//       remoteVideo.mozRequestFullScreen();
+//     } else if (remoteVideo.webkitRequestFullscreen) {
+//       // Chrome, Safari and Opera
+//       remoteVideo.webkitRequestFullscreen();
+//     } else if (remoteVideo.msRequestFullscreen) {
+//       // IE/Edge
+//       remoteVideo.msRequestFullscreen();
+//     }
+//   } else {
+//     if (document.exitFullscreen) {
+//       document.exitFullscreen();
+//     } else if (document.mozCancelFullScreen) {
+//       // Firefox
+//       document.mozCancelFullScreen();
+//     } else if (document.webkitExitFullscreen) {
+//       // Chrome, Safari and Opera
+//       document.webkitExitFullscreen();
+//     } else if (document.msExitFullscreen) {
+//       // IE/Edge
+//       document.msExitFullscreen();
+//     }
+//   }
+// }

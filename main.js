@@ -1,10 +1,6 @@
-// TODO : DISABLE FILE
-
 const peerId_input = document.getElementById("peer-id");
 const call_btn = document.getElementById("call-btn");
 const myId_input = document.getElementById("my-id");
-const localVideo = document.getElementById("local-video");
-const remoteVideo = document.getElementById("remote-video");
 const hangup_btn = document.getElementById("hangup-btn");
 const shareChoice_select = document.getElementById("share-select");
 const standby_video = document.getElementById("standby-video");
@@ -22,7 +18,7 @@ chatMessage_input.addEventListener("keydown", (e) => {
   }
 });
 sendMessage_btn.addEventListener("click", (e) => {
-  chatChannel.send({type:"chat-message",message: chatMessage_input.value});
+  chatChannel.send({ type: "chat-message", message: chatMessage_input.value });
   pushChatMessage(chatMessage_input.value, true);
 });
 
@@ -67,6 +63,8 @@ async function init() {
     chatChannel = conn;
     setupChatChanel(chatChannel);
   });
+
+  resetFileSharing();
 }
 
 async function call() {
@@ -82,6 +80,8 @@ async function call() {
     chatChannel = peer.connect(call.peer);
     setupChatChanel(chatChannel);
     hangup_btn.disabled = false;
+
+    turnOnFileSharing();
   });
 
   call.on("error", (err) => {
@@ -128,6 +128,8 @@ async function answerCall(callPeerId) {
     updateConnectionStatus("Connected");
     peerId_input.value = call.peer;
     hangup_btn.disabled = false;
+
+    turnOnFileSharing();
   });
 
   call.on("error", (err) => {
@@ -151,8 +153,9 @@ function hangup() {
   }
 
   updateConnectionStatus("idle");
-  localVideo.srcObject = getStandbyStream();
-  remoteVideo.srcObject = null;
+  gotLocalStream(getStandbyStream());
+  gotRemoteStream(null);
+
   if (currentStream) {
     currentStream.getTracks().forEach((track) => track.stop());
     currentStream = null;
@@ -163,15 +166,17 @@ function hangup() {
   closeChatChannel();
   shareChoice_select.value = "none";
   validatePeerIdInput();
+
+  resetFileSharing();
 }
 
 // stream related functions
 function gotLocalStream(stream) {
-  localVideo.srcObject = stream;
+  setLocalVideoStream(stream);
 }
 
 function gotRemoteStream(stream) {
-  remoteVideo.srcObject = stream;
+  setRemoteVideoStream(stream);
 }
 
 async function toggleStream() {
@@ -240,33 +245,32 @@ function getStandbyStream() {
 }
 
 function toggleMute() {
-  if (currentStream) {
-    const audioTracks = currentStream.getAudioTracks();
-    if (audioTracks.length > 0) {
-      const track = audioTracks[0];
+  if (!currentStream) return;
+  const audioTracks = currentStream.getAudioTracks();
 
-      // Stop the track if muted, otherwise restart it
-      if (isMuted) {
-        track.enabled = true; // Unmute
-      } else {
-        track.enabled = false; // Mute
-      }
+  if (!audioTracks.length > 0) return;
+  const track = audioTracks[0];
 
-      isMuted = !isMuted;
-      mute_btn.innerText = isMuted ? "Unmute" : "Mute";
-
-      Object.values(peer.connections).forEach((connection) => {
-        connection.forEach((conn) => {
-          if (!conn.peerConnection) return;
-          conn.peerConnection.getSenders().forEach((sender) => {
-            if (sender.track && sender.track.kind === "audio") {
-              sender.replaceTrack(track);
-            }
-          });
-        });
-      });
-    }
+  // Stop the track if muted, otherwise restart it
+  if (isMuted) {
+    track.enabled = true; // Unmute
+  } else {
+    track.enabled = false; // Mute
   }
+
+  isMuted = !isMuted;
+  mute_btn.innerText = isMuted ? "Unmute" : "Mute";
+
+  Object.values(peer.connections).forEach((connection) => {
+    connection.forEach((conn) => {
+      if (!conn.peerConnection) return;
+      conn.peerConnection.getSenders().forEach((sender) => {
+        if (sender.track && sender.track.kind === "audio") {
+          sender.replaceTrack(track);
+        }
+      });
+    });
+  });
 }
 
 function resetMute() {
@@ -384,11 +388,18 @@ function sendFile() {
 function receiveFile(file, fileName) {
   const blob = new Blob([file]);
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.textContent = fileName;
-  document.getElementById("file-list").appendChild(link);
+  addFileToList(url, fileName);
+}
+
+function resetFileSharing() {
+  sendFile_btn.disabled = true;
+  fileInput.disabled = true;
+  clearFileList();
+}
+
+function turnOnFileSharing() {
+  sendFile_btn.disabled = false;
+  fileInput.disabled = false;
 }
 
 // Chat related functions
