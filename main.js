@@ -22,7 +22,7 @@ chatMessage_input.addEventListener("keydown", (e) => {
   }
 });
 sendMessage_btn.addEventListener("click", (e) => {
-  chatChannel.send(chatMessage_input.value);
+  chatChannel.send({type:"chat-message",message: chatMessage_input.value});
   pushChatMessage(chatMessage_input.value, true);
 });
 
