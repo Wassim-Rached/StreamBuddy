@@ -6,6 +6,15 @@ const fileList = document.getElementById("file-list");
 const localVideo = document.getElementById("local-video");
 const remoteVideo = document.getElementById("remote-video");
 
+function showPopup(message, type) {
+  new Noty({
+    type: type,
+    layout: "bottomRight",
+    text: message,
+    timeout: 3000,
+  }).show();
+}
+
 function pushChatMessage(message, byMe = false) {
   if (!message || message.trim() === "") return;
 
@@ -50,14 +59,14 @@ function pushAlert(message, type = "info") {
 }
 
 function validatePeerIdInput() {
-  if (!peerId_input.value || peerId_input.value === "") {
+  if (!peerIdInput.value || peerIdInput.value === "") {
     call_btn.disabled = true;
     return;
   }
 
-  console.log(peer && peer.id && peer.id == peerId_input.value);
+  console.log(peer && peer.id && peer.id == peerIdInput.value);
 
-  if (peer && peer.id && peer.id == peerId_input.value) {
+  if (peer && peer.id && peer.id == peerIdInput.value) {
     call_btn.disabled = true;
     return;
   }
@@ -146,33 +155,3 @@ function toggleFullScreen(videoId) {
     button.textContent = "Full Screen";
   }
 }
-
-// function toggleRemoteVideoFullScreen() {
-//   if (!document.fullscreenElement) {
-//     if (remoteVideo.requestFullscreen) {
-//       remoteVideo.requestFullscreen();
-//     } else if (remoteVideo.mozRequestFullScreen) {
-//       // Firefox
-//       remoteVideo.mozRequestFullScreen();
-//     } else if (remoteVideo.webkitRequestFullscreen) {
-//       // Chrome, Safari and Opera
-//       remoteVideo.webkitRequestFullscreen();
-//     } else if (remoteVideo.msRequestFullscreen) {
-//       // IE/Edge
-//       remoteVideo.msRequestFullscreen();
-//     }
-//   } else {
-//     if (document.exitFullscreen) {
-//       document.exitFullscreen();
-//     } else if (document.mozCancelFullScreen) {
-//       // Firefox
-//       document.mozCancelFullScreen();
-//     } else if (document.webkitExitFullscreen) {
-//       // Chrome, Safari and Opera
-//       document.webkitExitFullscreen();
-//     } else if (document.msExitFullscreen) {
-//       // IE/Edge
-//       document.msExitFullscreen();
-//     }
-//   }
-// }

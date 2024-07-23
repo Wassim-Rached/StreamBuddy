@@ -15,6 +15,15 @@
     />
     <link rel="icon" href="icon.ico" type="image/x-icon" />
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/noty/lib/noty.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/noty/lib/themes/mint.css"
+    />
     <link rel="stylesheet" href="index.css" />
   </head>
   <body>
@@ -47,8 +56,11 @@
         <input type="text" class="form-control" id="peer-id" />
       </div>
       <div class="d-flex gap-2 mb-3">
-        <button disabled id="call-btn" class="btn btn-primary btn-custom">
+        <!-- <button disabled id="call-btn" class="btn btn-primary btn-custom">
           Call
+        </button> -->
+        <button id="connect-btn" class="btn btn-primary btn-custom">
+          Connect
         </button>
         <button disabled id="hangup-btn" class="btn btn-danger btn-custom">
           Hangup
@@ -111,9 +123,15 @@
         </div>
       </div>
       <h3 class="mt-4">Incoming Calls</h3>
-      <div id="calls" class="d-flex">
+      <div id="incomming-calls-container" class="d-flex">
         <div class="alert alert-info text-center mt-3" role="alert">
           No incoming calls at the moment.
+        </div>
+      </div>
+      <h3 class="mt-4">Outgoing Calls</h3>
+      <div id="outgoing-calls-container" class="d-flex">
+        <div class="alert alert-info text-center mt-3" role="alert">
+          No outgoing calls at the moment.
         </div>
       </div>
     </div>
@@ -182,6 +200,7 @@
         <source src="standBy.mp4" type="video/mp4" />
       </video>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/noty/lib/noty.min.js"></script>
     <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
