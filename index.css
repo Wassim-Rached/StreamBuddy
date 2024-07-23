@@ -1,6 +1,8 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
+
 body {
   background-color: #f8f9fa;
-  font-family: Arial, sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 #videos {
@@ -40,19 +42,29 @@ body {
 }
 
 .chat-container {
-  margin: auto;
-  font-family: Arial, sans-serif;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-box-container {
+  background-color: #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
 
 .chat-box {
   height: 350px;
-  background-color: #ffffff;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow: scroll;
 }
 
 .chat-message {
   padding: 10px 15px;
-  margin: 5px 0;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-top: 3px;
+  margin-bottom: 3px;
   border-radius: 15px;
   width: fit-content;
   max-width: 70%;
@@ -132,4 +144,12 @@ body {
   height: 100%;
   width: 100%;
   max-width: 100%;
+}
+
+#is-typing-indicator {
+  display: none;
+  color: #333;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  font-style: italic;
 }

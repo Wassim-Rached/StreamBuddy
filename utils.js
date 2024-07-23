@@ -5,6 +5,7 @@ const chatBox = document.getElementById("chat-box");
 const fileList = document.getElementById("file-list");
 const localVideo = document.getElementById("local-video");
 const remoteVideo = document.getElementById("remote-video");
+const isTypingIndicator = document.getElementById("is-typing-indicator");
 
 function showPopup(message, type) {
   new Noty({
@@ -32,11 +33,18 @@ function pushChatMessage(message, byMe = false) {
 
   // Append the message div to the chat box
   chatBox.appendChild(chatMessage);
-  chatBox.scrollTop = chatBox.scrollHeight;
 
   if (byMe) {
-    chatMessage_input.value = "";
+    chatMessageInput.value = "";
+    chatBox.scrollTop = chatBox.scrollHeight;
   }
+}
+
+function renderIsTyping(renderForSeconds) {
+  isTypingIndicator.style.display = "block";
+  setTimeout(() => {
+    isTypingIndicator.style.display = "none";
+  }, renderForSeconds * 1000);
 }
 
 function clearChatMessages() {

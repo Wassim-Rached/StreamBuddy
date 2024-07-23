@@ -11,8 +11,8 @@ const incommingCallsContainer = document.getElementById(
 const outgoingCallsContainer = document.getElementById(
   "outgoing-calls-container"
 );
-// const sendMessage_btn = document.getElementById("send-message-btn");
-// const chatMessage_input = document.getElementById("chat-message-input");
+const sendMessageBtn = document.getElementById("send-message-btn");
+const chatMessageInput = document.getElementById("chat-message-input");
 // const sendFile_btn = document.getElementById("send-file-btn");
 // const fileInput = document.getElementById("file-input");
 const connectBtn = document.getElementById("connect-btn");
@@ -22,15 +22,12 @@ function getOtherPeerId() {
 }
 
 // peerId_input.addEventListener("input", validatePeerIdInput);
-// chatMessage_input.addEventListener("keydown", (e) => {
-//   if (e.key === "Enter") {
-//     sendMessage_btn.click();
-//   }
-// });
-// sendMessage_btn.addEventListener("click", (e) => {
-//   chatChannel.send({ type: "chat-message", message: chatMessage_input.value });
-//   pushChatMessage(chatMessage_input.value, true);
-// });
+chatMessageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    sendMessageBtn.click();
+  }
+});
+sendMessageBtn.addEventListener("click", sendChatMessage);
 
 const coreConnectionEstablishedSuccessfullyEvent = new CustomEvent(
   "coreConnectionEstablishedSuccessfully"
@@ -38,6 +35,7 @@ const coreConnectionEstablishedSuccessfullyEvent = new CustomEvent(
 const coreConnectionHangupEvent = new CustomEvent("coreConnectionHangup");
 
 // varibles
+let amITheSender = undefined;
 let peer; // represents the current user
 let currentStream; // represents the current stream
 let isMuted; // represents the current mute status
@@ -46,6 +44,8 @@ let chatChannel; // represents the chat channel
 let coreConnection;
 let outGoingCoreConnectionRequests = new Map();
 let inCommingCoreConnectionRequests = new Map();
+
+let chatConnection;
 
 let incomingCalls; // represents the incoming calls list
 let outgoingCalls; // represents the outgoing calls list
@@ -57,9 +57,22 @@ hangupBtn.addEventListener("click", closeCoreConnection);
 // mute_btn.addEventListener("click", toggleMute);
 // shareChoice_select.addEventListener("change", toggleStream);
 // sendFile_btn.addEventListener("click", sendFile);
+chatMessageInput.addEventListener("input", sendIsTyping);
 connectBtn.addEventListener("click", (e) =>
   sendCoreConnectionRequest(getOtherPeerId())
 );
+
+// helpers
+function getAmiTheSender() {
+  if (amITheSender === undefined) {
+    console.error("amITheSender is not set");
+  }
+  return amITheSender;
+}
+
+function setAmITheSender(value) {
+  amITheSender = value;
+}
 
 // window events
 window.addEventListener(
@@ -76,13 +89,26 @@ function onCoreConnectionEstablishedSuccessfully() {
   connectBtn.disabled = true;
   hangupBtn.disabled = false;
   updateConnectionStatus("Connected");
+
+  if (getAmiTheSender()) {
+    console.log("i am the sender");
+    chatConnection = peer.connect(coreConnection.peer, {
+      metadata: { type: "chat" },
+    });
+    setupChatConnection(chatConnection);
+  } else {
+    console.log("i am the reciver");
+  }
 }
 
 function onCoreConnectionHangup() {
-  showPopup("Core connection hangup successfully", "success");
+  showPopup("Core connection hangup successfully", "info");
   connectBtn.disabled = false;
   hangupBtn.disabled = true;
   updateConnectionStatus("idle");
+
+  // chat related
+  resetChatMessages();
 }
 
 async function init() {
@@ -134,6 +160,10 @@ function handlePeerConnectionConnection(conn) {
       });
       conn.on("close", () => onCoreConnectionClose(conn));
       break;
+    case "chat":
+      chatConnection = conn;
+      setupChatConnection(chatConnection);
+      break;
     default:
       console.error("Unknown connection type", conn.metadata.type);
   }
@@ -152,6 +182,7 @@ function sendCoreConnectionRequest(peerId) {
   conn.on("data", (data) => {
     switch (data.type) {
       case "connection-accepted":
+        setAmITheSender(true);
         coreConnection = outGoingCoreConnectionRequests.get(peerId);
         window.dispatchEvent(coreConnectionEstablishedSuccessfullyEvent);
         removeInCommingCoreConnectionRequest(peerId);
@@ -174,6 +205,7 @@ function sendCoreConnectionRequest(peerId) {
 
 function acceptCoreConnectionRequest(peerId) {
   // reciver function
+  setAmITheSender(false);
   const conn = getInCommingCoreConnectionRequest(peerId);
   conn.send({ type: "connection-accepted" });
   coreConnection = conn;
@@ -542,19 +574,6 @@ function cancelOutGoingCoreConnectionRequest(peerId) {
 //   renderCalls();
 // }
 
-// function handleChannelData(data) {
-//   switch (data.type) {
-//     case "chat-message":
-//       pushChatMessage(data.message, false);
-//       break;
-//     case "file":
-//       receiveFile(data.file, data.fileName);
-//       break;
-//     default:
-//       console.log("Unknown message type", data);
-//   }
-// }
-
 // // file related functions
 // function sendFile() {
 //   const file = fileInput.files[0];
@@ -590,37 +609,65 @@ function cancelOutGoingCoreConnectionRequest(peerId) {
 //   fileInput.disabled = false;
 // }
 
-// // Chat related functions
-// function setupChatChannel(chatChannel) {
-//   chatChannel.on("open", () => {
-//     console.log("Chat channel open");
-//     sendMessage_btn.disabled = false;
-//     chatMessage_input.disabled = false;
+/*
+  Chat related functions
+*/
+function setupChatConnection(conn) {
+  conn.on("open", () => {
+    sendMessageBtn.disabled = false;
+    chatMessageInput.disabled = false;
 
-//     chatChannel.on("data", handleChannelData);
+    conn.on("data", handleChatConnectionData);
 
-//     chatChannel.on("close", () => {
-//       closeChatChannel();
-//     });
+    conn.on("close", handleChatConnectionClose);
 
-//     chatChannel.on("error", (err) => {
-//       console.log("Chat error", err);
-//     });
-//   });
-// }
+    conn.on("error", (err) => console.error(err));
+  });
+}
 
-// function closeChatChannel() {
-//   if (chatChannel) {
-//     chatChannel.close();
-//   }
-//   clearChatMessages();
-//   // disable chat input and btn
-//   sendMessage_btn.disabled = true;
-//   chatMessage_input.disabled = true;
-// }
+function handleChatConnectionData(data) {
+  switch (data.type) {
+    case "chat-message":
+      pushChatMessage(data.message, false);
+      break;
+    case "is-typing":
+      handleIsTyping(data);
+      break;
+    default:
+      console.error("Unknown message type", data.type);
+  }
+}
 
-// function resetChatMessages() {
-//   clearChatMessages();
-//   sendMessage_btn.disabled = true;
-//   chatMessage_input.disabled = true;
-// }
+function handleChatConnectionClose() {
+  console.log("Chat connection closed");
+  if (chatConnection) {
+    chatConnection.close();
+  }
+  resetChatMessages();
+}
+
+function sendChatMessage() {
+  const message = chatMessageInput.value;
+  if (!message || message.trim() === "") return;
+  chatConnection.send({
+    type: "chat-message",
+    message: message,
+  });
+  pushChatMessage(message, true);
+}
+
+function handleIsTyping(data) {
+  renderIsTyping(2);
+}
+
+function sendIsTyping() {
+  chatConnection.send({
+    type: "is-typing",
+  });
+}
+
+function resetChatMessages() {
+  clearChatMessages();
+  sendMessageBtn.disabled = true;
+  chatMessageInput.disabled = true;
+}
