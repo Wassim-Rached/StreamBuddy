@@ -2,7 +2,6 @@ const alertsContainer = document.getElementById("alerts-container");
 const copy_btn = document.getElementById("copy-btn");
 const connectionStatus = document.getElementById("connection-status");
 const chatBox = document.getElementById("chat-box");
-const fileList = document.getElementById("file-list");
 const localVideo = document.getElementById("local-video");
 const remoteVideo = document.getElementById("remote-video");
 const isTypingIndicator = document.getElementById("is-typing-indicator");
@@ -107,18 +106,6 @@ copy_btn.addEventListener("click", () => {
       console.log("Error copying text: ", err);
     });
 });
-
-function addFileToList(url, fileName) {
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.textContent = fileName;
-  fileList.appendChild(link);
-}
-
-function clearFileList() {
-  fileList.innerHTML = "";
-}
 
 // video related functions
 function setLocalVideoStream(stream) {

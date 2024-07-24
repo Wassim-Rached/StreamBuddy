@@ -1,3 +1,5 @@
+const FILE_SHARE_CHUNK_SIZE = 16 * 1024; // 16 KB
+
 const peerIdInput = document.getElementById("peer-id");
 // const call_btn = document.getElementById("call-btn");
 const myId_input = document.getElementById("my-id");
@@ -13,8 +15,8 @@ const outgoingCallsContainer = document.getElementById(
 );
 const sendMessageBtn = document.getElementById("send-message-btn");
 const chatMessageInput = document.getElementById("chat-message-input");
-// const sendFile_btn = document.getElementById("send-file-btn");
-// const fileInput = document.getElementById("file-input");
+const sendFileBtn = document.getElementById("send-file-btn");
+const fileInput = document.getElementById("file-input");
 const connectBtn = document.getElementById("connect-btn");
 
 function getOtherPeerId() {
@@ -41,11 +43,12 @@ let currentStream; // represents the current stream
 let isMuted; // represents the current mute status
 let chatChannel; // represents the chat channel
 
-let coreConnection;
+let coreConnection; // used to connect both clients
+let chatConnection; // used for the chat data exchange
+let fileConnection; // used for the file data exchange
+
 let outGoingCoreConnectionRequests = new Map();
 let inCommingCoreConnectionRequests = new Map();
-
-let chatConnection;
 
 let incomingCalls; // represents the incoming calls list
 let outgoingCalls; // represents the outgoing calls list
@@ -56,7 +59,7 @@ window.addEventListener("load", init);
 hangupBtn.addEventListener("click", closeCoreConnection);
 // mute_btn.addEventListener("click", toggleMute);
 // shareChoice_select.addEventListener("change", toggleStream);
-// sendFile_btn.addEventListener("click", sendFile);
+sendFileBtn.addEventListener("click", sendFileRequest);
 chatMessageInput.addEventListener("input", sendIsTyping);
 connectBtn.addEventListener("click", (e) =>
   sendCoreConnectionRequest(getOtherPeerId())
@@ -92,10 +95,17 @@ function onCoreConnectionEstablishedSuccessfully() {
 
   if (getAmiTheSender()) {
     console.log("i am the sender");
+    // chat related
     chatConnection = peer.connect(coreConnection.peer, {
       metadata: { type: "chat" },
     });
     setupChatConnection(chatConnection);
+
+    // file sharing related
+    fileConnection = peer.connect(coreConnection.peer, {
+      metadata: { type: "file" },
+    });
+    setupFileConnection(fileConnection);
   } else {
     console.log("i am the reciver");
   }
@@ -108,7 +118,10 @@ function onCoreConnectionHangup() {
   updateConnectionStatus("idle");
 
   // chat related
-  resetChatMessages();
+  closeChatConnection();
+
+  // file sharing related
+  closeFileConnection();
 }
 
 async function init() {
@@ -128,8 +141,8 @@ async function init() {
 
   peer.on("connection", handlePeerConnectionConnection);
 
-  // resetFileSharing();
-  // resetChatMessages();
+  resetFileSharing();
+  resetChatMessages();
 }
 
 // peer related functions
@@ -163,6 +176,10 @@ function handlePeerConnectionConnection(conn) {
     case "chat":
       chatConnection = conn;
       setupChatConnection(chatConnection);
+      break;
+    case "file":
+      fileConnection = conn;
+      setupFileConnection(fileConnection);
       break;
     default:
       console.error("Unknown connection type", conn.metadata.type);
@@ -574,43 +591,256 @@ function cancelOutGoingCoreConnectionRequest(peerId) {
 //   renderCalls();
 // }
 
-// // file related functions
-// function sendFile() {
-//   const file = fileInput.files[0];
-//   if (!file) return;
+/*
+  Start : File sharing related functions
+*/
+function setupFileConnection(conn) {
+  conn.on("open", () => {
+    sendFileBtn.disabled = false;
+    fileInput.disabled = false;
 
-//   const reader = new FileReader();
-//   reader.onload = () => {
-//     chatChannel.send({
-//       type: "file",
-//       file: reader.result,
-//       fileName: file.name,
-//     });
-//   };
-//   reader.readAsArrayBuffer(file);
-//   // clear the input
-//   fileInput.value = null;
-// }
+    conn.on("data", handleFileConnectionData);
+    conn.on("close", handleFileConnectionClose);
+    conn.on("error", (err) => console.error(err));
+  });
+}
 
-// function receiveFile(file, fileName) {
-//   const blob = new Blob([file]);
-//   const url = URL.createObjectURL(blob);
-//   addFileToList(url, fileName);
-// }
+function handleFileConnectionData(data) {
+  switch (data.type) {
+    case "file":
+      handleFileTransfer(data.data);
+      break;
+    case "file-request":
+      handleFileRequest(data);
+      break;
+    case "file-response":
+      handleFileResponse(data);
+      break;
+    case "cancel-file-request":
+      handleCancelFileRequest(data);
+      break;
+    case "file-delivered":
+      handleFileDelivered(data);
+      break;
+    default:
+      console.error("Unknown message type", data.type);
+  }
+}
 
-// function resetFileSharing() {
-//   sendFile_btn.disabled = true;
-//   fileInput.disabled = true;
-//   clearFileList();
-// }
+function handleFileConnectionClose() {
+  console.log("File connection closed");
 
-// function turnOnFileSharing() {
-//   sendFile_btn.disabled = false;
-//   fileInput.disabled = false;
-// }
+  fileConnection = undefined;
+  resetFileSharing();
+}
+
+const fileTransfers = new Map(); // used to handle multiple file transfers at the same time
+function handleFileTransfer({
+  file,
+  fileName,
+  currentChunk,
+  totalChunks,
+  transferId,
+}) {
+  // reciver function
+  if (!fileTransfers.has(transferId)) {
+    fileTransfers.set(transferId, {
+      chunks: [],
+      totalChunks,
+      fileName,
+      receivedChunks: 0,
+    });
+    const totalSize = totalChunks * FILE_SHARE_CHUNK_SIZE;
+    addFileProgressBar(transferId, fileName, totalSize, false);
+  }
+
+  const transfer = fileTransfers.get(transferId);
+  transfer.chunks[currentChunk] = file;
+  transfer.receivedChunks++;
+
+  const progress = Math.floor((transfer.receivedChunks / totalChunks) * 100);
+  updateFileProgress(transferId, progress);
+
+  if (transfer.receivedChunks === transfer.totalChunks) {
+    const blob = new Blob(transfer.chunks);
+    const url = URL.createObjectURL(blob);
+    const totalSize = totalChunks * FILE_SHARE_CHUNK_SIZE;
+    addFileToDownloadList(url, transfer.fileName, totalSize);
+    showPopup("New file received: " + transfer.fileName, "info");
+    fileTransfers.delete(transferId);
+    removeFileProgressBar(transferId);
+    fileConnection.send({
+      type: "file-delivered",
+      transferId,
+    });
+  }
+}
+
+const incomingFileRequests = new Map(); // used to persist primary info about the file for the reciver
+function handleFileRequest({ fileName, size, transferId }) {
+  // reciver function
+  showPopup("New file request: " + fileName, "info");
+  incomingFileRequests.set(transferId, { fileName, size });
+  addIncommingFileRequestToHtmlList(fileName, size, transferId);
+}
+
+function handleFileResponse({ response, transferId }) {
+  // sender function
+  const isAccepted = response === "accepted";
+  if (isAccepted) {
+    const file = waitingFileRequests.get(transferId);
+    if (!file) {
+      showPopup("File Not Found", "error");
+      return;
+    }
+    waitingFileRequests.delete(transferId);
+    startSendingFile(file);
+    removeOutgoingFileRequestFromHtmlList(transferId);
+    showPopup("File transfer accepted", "success");
+  } else {
+    removeOutgoingFileRequestFromHtmlList(transferId);
+    waitingFileRequests.delete(transferId);
+    showPopup("File transfer rejected", "error");
+  }
+}
+
+function handleCancelFileRequest({ transferId }) {
+  // reciver function
+  const file = incomingFileRequests.get(transferId);
+  showPopup("File transfer request cancelled for : " + file.fileName, "error");
+  incomingFileRequests.delete(transferId);
+  removeIncommingFileRequestFromHtmlList(transferId);
+}
+
+function handleFileDelivered({ transferId }) {
+  // sender function
+  setFileProgressDelivrered(transferId);
+}
+
+function acceptFileTransferRequest(transferId) {
+  // reciver function
+  fileConnection.send({
+    type: "file-response",
+    response: "accepted",
+    transferId,
+  });
+  showPopup("File transfer accepted", "success");
+  removeIncommingFileRequestFromHtmlList(transferId);
+}
+
+function rejectFileTransferRequest(transferId) {
+  // reciver function
+  fileConnection.send({
+    type: "file-response",
+    response: "rejected",
+    transferId,
+  });
+  showPopup("File transfer rejected", "error");
+  removeIncommingFileRequestFromHtmlList(transferId);
+}
+
+function cancelFileTransferRequest(transferId) {
+  // sender function
+  fileConnection.send({
+    type: "cancel-file-request",
+    transferId,
+  });
+  waitingFileRequests.delete(transferId);
+  removeOutgoingFileRequestFromHtmlList(transferId);
+}
+
+const waitingFileRequests = new Map();
+function sendFileRequest() {
+  // sender function
+  const file = fileInput.files[0];
+  const transferId = String(Date.now());
+  if (!file) return;
+  fileConnection.send({
+    type: "file-request",
+    fileName: file.name,
+    size: file.size,
+    transferId: transferId,
+  });
+  waitingFileRequests.set(transferId, file);
+  clearFileInput();
+  addOutgoingFileRequestToHtmlList(file.name, file.size, transferId);
+}
+
+function startSendingFile(file) {
+  // sender function
+  if (!file) return;
+
+  const transferId = Date.now(); // Unique ID for each transfer
+  const chunkSize = FILE_SHARE_CHUNK_SIZE;
+  const totalChunks = Math.ceil(file.size / chunkSize);
+  let currentChunk = 0;
+  addFileProgressBar(transferId, file.name, file.size, true);
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (!fileConnection) return;
+    fileConnection.send({
+      type: "file",
+      data: {
+        file: reader.result,
+        fileName: file.name,
+        currentChunk,
+        totalChunks,
+        transferId,
+      },
+    });
+
+    currentChunk++;
+    const progress = Math.floor((currentChunk / totalChunks) * 100);
+    updateFileProgress(transferId, progress);
+
+    if (currentChunk < totalChunks) {
+      readNextChunk();
+    } else {
+      // called when all chunks are sent
+      setFileProgressWaitingForConfirmation(transferId);
+      clearFileInput();
+    }
+  };
+
+  const readNextChunk = () => {
+    const start = currentChunk * chunkSize;
+    const end = Math.min(start + chunkSize, file.size);
+    const blob = file.slice(start, end);
+    reader.readAsArrayBuffer(blob);
+  };
+
+  readNextChunk();
+}
+
+function resetFileSharing() {
+  sendFileBtn.disabled = true;
+  fileInput.disabled = true;
+  // clearFileDownloadList();
+  clearFileInput();
+  fileTransfers.clear();
+  incomingFileRequests.clear();
+  waitingFileRequests.clear();
+  emptyOutgoingFileRequestsContainer();
+  emptyIncommingFileRequestsContainer();
+  clearFileProgressBars();
+}
+
+function clearFileInput() {
+  fileInput.value = null;
+}
+
+function closeFileConnection() {
+  if (fileConnection && fileConnection.open) {
+    fileConnection.close();
+  }
+}
+/*
+  End : File sharing related functions
+*/
 
 /*
-  Chat related functions
+  Start : Chat related functions
 */
 function setupChatConnection(conn) {
   conn.on("open", () => {
@@ -640,9 +870,8 @@ function handleChatConnectionData(data) {
 
 function handleChatConnectionClose() {
   console.log("Chat connection closed");
-  if (chatConnection) {
-    chatConnection.close();
-  }
+
+  chatConnection = undefined;
   resetChatMessages();
 }
 
@@ -671,3 +900,12 @@ function resetChatMessages() {
   sendMessageBtn.disabled = true;
   chatMessageInput.disabled = true;
 }
+
+function closeChatConnection() {
+  if (chatConnection && chatConnection.open) {
+    chatConnection.close();
+  }
+}
+/*
+  End : Chat related functions
+*/
