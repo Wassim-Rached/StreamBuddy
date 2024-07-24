@@ -49,9 +49,12 @@ body {
 }
 
 .chat-box-container {
-  background-color: #ffffff;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1), -4px 0 6px rgba(0, 0, 0, 0.1),
+    4px 0 6px rgba(0, 0, 0, 0.1);
   padding: 20px;
+  border-radius: 20px 20px 0 0;
+  border: 2px solid #e6e6e6;
+  border-bottom: none;
 }
 
 .chat-box {
@@ -146,10 +149,18 @@ body {
   max-width: 100%;
 }
 
+#is-typing-indicator-container {
+  height: 30px;
+}
+
 #is-typing-indicator {
   display: none;
   color: #333;
   margin-top: 10px;
   font-size: 0.9rem;
   font-style: italic;
+}
+
+[disabled] {
+  cursor: not-allowed !important;
 }

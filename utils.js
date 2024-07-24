@@ -39,11 +39,17 @@ function pushChatMessage(message, byMe = false) {
   }
 }
 
+let isTypingTimeout;
 function renderIsTyping(renderForSeconds) {
   isTypingIndicator.style.display = "block";
-  setTimeout(() => {
-    isTypingIndicator.style.display = "none";
+  clearTimeout(isTypingTimeout);
+  isTypingTimeout = setTimeout(() => {
+    clearIsTyping();
   }, renderForSeconds * 1000);
+}
+
+function clearIsTyping() {
+  isTypingIndicator.style.display = "none";
 }
 
 function clearChatMessages() {
@@ -95,7 +101,7 @@ function updateConnectionStatus(status) {
 
 copy_btn.addEventListener("click", () => {
   navigator.clipboard
-    .writeText(myId_input.value)
+    .writeText(myIdInput.value)
     .then(() => {
       copy_btn.innerText = "Copied!";
       setTimeout(() => {

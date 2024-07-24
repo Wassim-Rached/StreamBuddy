@@ -1,27 +1,28 @@
 const FILE_SHARE_CHUNK_SIZE = 16 * 1024; // 16 KB
 
-const peerIdInput = document.getElementById("peer-id");
 // const call_btn = document.getElementById("call-btn");
-const myId_input = document.getElementById("my-id");
-const hangupBtn = document.getElementById("hangup-btn");
 // const shareChoice_select = document.getElementById("share-select");
 // const standby_video = document.getElementById("standby-video");
 // const mute_btn = document.getElementById("mute-btn");
+
 const incommingCallsContainer = document.getElementById(
   "incomming-calls-container"
 );
 const outgoingCallsContainer = document.getElementById(
   "outgoing-calls-container"
 );
-const sendMessageBtn = document.getElementById("send-message-btn");
-const chatMessageInput = document.getElementById("chat-message-input");
-const sendFileBtn = document.getElementById("send-file-btn");
-const fileInput = document.getElementById("file-input");
-const connectBtn = document.getElementById("connect-btn");
 
-function getOtherPeerId() {
-  return peerIdInput.value;
-}
+// inputs
+const peerIdInput = document.getElementById("peer-id");
+const myIdInput = document.getElementById("my-id");
+const chatMessageInput = document.getElementById("chat-message-input");
+const fileInput = document.getElementById("file-input");
+
+// buttons
+const hangupBtn = document.getElementById("hangup-btn");
+const sendMessageBtn = document.getElementById("send-message-btn");
+const sendFileBtn = document.getElementById("send-file-btn");
+const connectBtn = document.getElementById("connect-btn");
 
 // peerId_input.addEventListener("input", validatePeerIdInput);
 chatMessageInput.addEventListener("keydown", (e) => {
@@ -41,7 +42,6 @@ let amITheSender = undefined;
 let peer; // represents the current user
 let currentStream; // represents the current stream
 let isMuted; // represents the current mute status
-let chatChannel; // represents the chat channel
 
 let coreConnection; // used to connect both clients
 let chatConnection; // used for the chat data exchange
@@ -54,11 +54,11 @@ let incomingCalls; // represents the incoming calls list
 let outgoingCalls; // represents the outgoing calls list
 
 // event listeners
-window.addEventListener("load", init);
 // call_btn.addEventListener("click", call);
-hangupBtn.addEventListener("click", closeCoreConnection);
 // mute_btn.addEventListener("click", toggleMute);
 // shareChoice_select.addEventListener("change", toggleStream);
+window.addEventListener("load", init);
+hangupBtn.addEventListener("click", closeCoreConnection);
 sendFileBtn.addEventListener("click", sendFileRequest);
 chatMessageInput.addEventListener("input", sendIsTyping);
 connectBtn.addEventListener("click", (e) =>
@@ -77,12 +77,15 @@ function setAmITheSender(value) {
   amITheSender = value;
 }
 
+function getOtherPeerId() {
+  return peerIdInput.value;
+}
+
 // window events
 window.addEventListener(
   "coreConnectionEstablishedSuccessfully",
   onCoreConnectionEstablishedSuccessfully
 );
-
 window.addEventListener("coreConnectionHangup", onCoreConnectionHangup);
 
 // core logic functions
@@ -131,7 +134,6 @@ async function init() {
   isMuted = false;
   incomingCalls = new Map();
   outgoingCalls = new Map();
-  chatChannel = undefined;
 
   // gotLocalStream(currentStream);
 
@@ -143,11 +145,12 @@ async function init() {
 
   resetFileSharing();
   resetChatMessages();
+  peerIdInput.value = "";
 }
 
 // peer related functions
 function handlePeerConnectionOpen(id) {
-  myId_input.value = id;
+  myIdInput.value = id;
 }
 
 function handlePeerConnectionCall(call) {
@@ -858,6 +861,7 @@ function setupChatConnection(conn) {
 function handleChatConnectionData(data) {
   switch (data.type) {
     case "chat-message":
+      clearIsTyping();
       pushChatMessage(data.message, false);
       break;
     case "is-typing":
@@ -886,7 +890,7 @@ function sendChatMessage() {
 }
 
 function handleIsTyping(data) {
-  renderIsTyping(2);
+  renderIsTyping(1);
 }
 
 function sendIsTyping() {
@@ -898,6 +902,7 @@ function sendIsTyping() {
 function resetChatMessages() {
   clearChatMessages();
   sendMessageBtn.disabled = true;
+  chatMessageInput.value = "";
   chatMessageInput.disabled = true;
 }
 
