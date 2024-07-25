@@ -65,9 +65,9 @@
         <button disabled id="hangup-btn" class="btn btn-danger btn-custom">
           Hangup
         </button>
-        <button disabled id="mute-btn" class="btn btn-secondary btn-custom">
+        <!-- <button disabled id="mute-btn" class="btn btn-secondary btn-custom">
           Mute
-        </button>
+        </button> -->
         <!-- <button
           onclick="toggleRemoteVideoFullScreen()"
           class="btn btn-secondary btn-custom"
@@ -84,6 +84,91 @@
           <option value="camera">Camera</option>
           <option value="screen">Screen</option>
         </select>
+      </div> -->
+      <div class="mt-3">
+        <hr />
+        <div class="mt-4">
+          <div class="row">
+            <!-- Audio Option -->
+            <div class="col-md-6 mb-3">
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  id="audio-checkbox"
+                />
+                <label class="form-check-label" for="audio-checkbox"
+                  >Microphone</label
+                >
+              </div>
+            </div>
+
+            <!-- Screen Audio Option -->
+            <div class="col-md-6 mb-3">
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  id="screenAudioOption"
+                />
+                <label class="form-check-label" for="screenAudioOption"
+                  >Screen Audio</label
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="audioDeviceOption" class="form-label"
+                >Audio Source:</label
+              >
+              <select class="form-select" id="audioDeviceOption">
+                <option value="none">Nothing</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- Video Options -->
+            <div class="col-md-6 mb-3">
+              <label for="videoOption" class="form-label">Video Source:</label>
+              <select class="form-select" id="videoOption">
+                <option value="none">Nothing</option>
+                <option value="camera">Camera</option>
+                <option value="screen">Screen</option>
+              </select>
+            </div>
+
+            <!-- Resolution Selection -->
+            <div class="col-md-6 mb-3">
+              <label for="resolutionOption" class="form-label"
+                >Resolution:</label
+              >
+              <select class="form-select" id="resolutionOption">
+                <option value="480">480p</option>
+                <option value="720">720p</option>
+                <option value="1080">1080p</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <!-- Mic Volume -->
+            <div class="col-md-12 mb-3">
+              <label for="micVolume" class="form-label"
+                >Microphone Volume:</label
+              >
+              <input
+                type="range"
+                class="form-range"
+                id="micVolume"
+                min="0"
+                max="100"
+              />
+            </div>
+          </div>
+        </div>
       </div>
       <div id="videos" class="d-flex gap-3 mt-4">
         <div class="video-container">
@@ -92,7 +177,7 @@
         <div class="video-container">
           <video id="remote-video" playsinline autoplay></video>
         </div>
-      </div> -->
+      </div>
       <div class="chat-container mt-4">
         <div class="chat-box-container">
           <div class="chat-box" id="chat-box"></div>
@@ -249,6 +334,7 @@
       src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"
       defer
     ></script>
+    <script src="callUtils.js" defer></script>
     <script src="fileShareUtils.js" defer></script>
     <script src="utils.js" defer></script>
     <script src="main.js" defer></script>
