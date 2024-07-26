@@ -88,6 +88,10 @@ window.addEventListener(
   onCoreConnectionEstablishedSuccessfully
 );
 window.addEventListener("coreConnectionHangup", onCoreConnectionHangup);
+window.addEventListener("updatePeerConnectionWithNewAudioTrack", () => {
+  console.log("received updatePeerConnectionWithNewAudioTrack event");
+  updatePeerConnectionWithNewAudioTrack(voiceCall.peerConnection);
+});
 
 // core logic functions
 async function onCoreConnectionEstablishedSuccessfully() {
@@ -429,6 +433,16 @@ function closeVoiceCall() {
   if (voiceCall && voiceCall.open) {
     voiceCall.close();
   }
+}
+
+function updateVoiceCallPeerStreamWithNewTrack(oldTrack, newTrack) {
+  if (!voiceCall) return;
+  const senders = voiceCall.peerConnection.getSenders();
+  senders.forEach((sender) => {
+    if (sender.track === oldTrack) {
+      sender.replaceTrack(newTrack);
+    }
+  });
 }
 
 /*  
