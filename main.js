@@ -44,6 +44,7 @@ let currentStream; // represents the current stream
 let isMuted; // represents the current mute status
 
 let coreConnection; // used to connect both clients
+let voiceCall; // used for the voice data exchange
 let chatConnection; // used for the chat data exchange
 let fileConnection; // used for the file data exchange
 
@@ -89,7 +90,7 @@ window.addEventListener(
 window.addEventListener("coreConnectionHangup", onCoreConnectionHangup);
 
 // core logic functions
-function onCoreConnectionEstablishedSuccessfully() {
+async function onCoreConnectionEstablishedSuccessfully() {
   showPopup("Core connection established successfully", "success");
   peerIdInput.value = coreConnection.peer;
   connectBtn.disabled = true;
@@ -98,6 +99,13 @@ function onCoreConnectionEstablishedSuccessfully() {
 
   if (getAmiTheSender()) {
     console.log("i am the sender");
+    // voice related
+    const localAudioStream = await getLocalAudioStream();
+    voiceCall = peer.call(coreConnection.peer, localAudioStream, {
+      metadata: { type: "voice" },
+    });
+    setupVoiceCall(voiceCall);
+
     // chat related
     chatConnection = peer.connect(coreConnection.peer, {
       metadata: { type: "chat" },
@@ -120,6 +128,9 @@ function onCoreConnectionHangup() {
   hangupBtn.disabled = true;
   updateConnectionStatus("idle");
 
+  // voice related
+  closeVoiceCall();
+
   // chat related
   closeChatConnection();
 
@@ -128,12 +139,16 @@ function onCoreConnectionHangup() {
 }
 
 async function init() {
+  myIdInput.value = "";
   peer = new Peer();
   // shareChoice_select.value = "none";
   // currentStream = await getStreamByShareType();
   isMuted = false;
   incomingCalls = new Map();
   outgoingCalls = new Map();
+
+  // voice related
+  audioCheckbox.checked = false;
 
   // gotLocalStream(currentStream);
 
@@ -154,7 +169,15 @@ function handlePeerConnectionOpen(id) {
 }
 
 function handlePeerConnectionCall(call) {
-  addCall(call);
+  switch (call.metadata.type) {
+    case "voice":
+      console.log("Voice call received with metadata");
+      voiceCall = call;
+      setupVoiceCall(call);
+      break;
+    default:
+      console.error("Unknown connection type", conn.metadata.type);
+  }
 }
 
 function handlePeerConnectionConnection(conn) {
@@ -258,215 +281,9 @@ function closeCoreConnection() {
   }
 }
 
-// call related functions
-// function handleCallStream(stream) {
-//   gotRemoteStream(stream);
-//   peerId_input.value = getActiveCall().peer;
-
-//   chatChannel = peer.connect(getActiveCall().peer);
-//   setupChatChannel(chatChannel);
-
-//   turnOnFileSharing();
-
-//   hangup_btn.disabled = false;
-
-//   updateConnectionStatus("Connected");
-// }
-
-// function handleCallError(err) {
-//   pushAlert("Call Offer No Longer Valid", "danger");
-//   updateConnectionStatus("Error");
-// }
-
-// function handleCallClose() {
-//   updateConnectionStatus("Connection closed");
-//   hangup();
-// }
-
-// async function call() {
-//   if (!currentStream) {
-//     currentStream = await getStreamByShareType();
-//   }
-//   gotLocalStream(currentStream);
-//   const call = peer.call(getOtherPeerId(), currentStream);
-
-//   call.on("stream", handleCallStream);
-
-//   call.on("error", handleCallError);
-
-//   call.on("close", handleCallClose);
-// }
-
-// async function answerCall(callPeerId) {
-//   const call = incomingCalls.get(callPeerId);
-//   if (!call) {
-//     alert("Call not found");
-//     removeCall(callPeerId);
-//     return;
-//   }
-
-//   if (getActiveCall()) {
-//     const areYouSure = confirm(
-//       "You are already in a call. Do you want to hang up and answer this call?"
-//     );
-//     if (!areYouSure) return;
-//     hangup();
-//   } else {
-//     const areYouSure = confirm("Do you want to answer this call?");
-//     if (!areYouSure) return;
-//   }
-
-//   cancelAllOutgoingCalls();
-
-//   if (!currentStream) {
-//     currentStream = await getStreamByShareType();
-//   }
-//   gotLocalStream(currentStream);
-//   call.answer(currentStream);
-
-//   call.on("stream", handleCallStream);
-
-//   call.on("error", handleCallError);
-
-//   call.on("close", handleCallClose);
-
-//   removeCall(callPeerId);
-// }
-
-// function hangup() {
-//   const activeCall = getActiveCall();
-//   if (activeCall) {
-//     activeCall.close();
-//   }
-
-//   updateConnectionStatus("idle");
-//   gotLocalStream(getStandbyStream());
-//   gotRemoteStream(null);
-
-//   if (currentStream) {
-//     currentStream.getTracks().forEach((track) => track.stop());
-//     currentStream = null;
-//   }
-
-//   hangup_btn.disabled = true;
-
-//   closeChatChannel();
-//   shareChoice_select.value = "none";
-//   validatePeerIdInput();
-
-//   resetFileSharing();
-// }
-
-// // stream related functions
-// function gotLocalStream(stream) {
-//   setLocalVideoStream(stream);
-// }
-
-// function gotRemoteStream(stream) {
-//   setRemoteVideoStream(stream);
-// }
-
-// async function toggleStream() {
-//   if (currentStream) {
-//     currentStream.getTracks().forEach((track) => track.stop());
-//   }
-
-//   currentStream = await getStreamByShareType();
-//   gotLocalStream(currentStream);
-
-//   Object.values(peer.connections).forEach((connection) => {
-//     connection.forEach((conn) => {
-//       if (!conn.peerConnection) return;
-//       conn.peerConnection.getSenders().forEach((sender) => {
-//         if (!sender.track) return;
-
-//         if (sender.track.kind === "video") {
-//           sender.replaceTrack(currentStream.getVideoTracks()[0]);
-//         } else if (sender.track.kind === "audio") {
-//           sender.replaceTrack(currentStream.getAudioTracks()[0]);
-//         }
-//       });
-//     });
-//   });
-// }
-
-// async function getUserMediaStream() {
-//   const res = await navigator.mediaDevices.getUserMedia({
-//     video: true,
-//     audio: true,
-//   });
-//   resetMute();
-//   mute_btn.disabled = false;
-//   return res;
-// }
-
-// async function getDisplayMediaStream() {
-//   const res = await navigator.mediaDevices.getDisplayMedia({
-//     video: true,
-//     audio: true,
-//   });
-//   resetMute();
-//   return res;
-// }
-
-// async function getStreamByShareType() {
-//   const shareType = shareChoice_select.value;
-//   if (shareType === "camera") {
-//     return await getUserMediaStream();
-//   } else if (shareType === "screen") {
-//     return await getDisplayMediaStream();
-//   } else if (shareType === "none") {
-//     return getStandbyStream();
-//   } else {
-//     console.error("Invalid share type");
-//     return await getUserMediaStream();
-//   }
-// }
-
-// function getStandbyStream() {
-//   resetMute();
-//   if (standby_video.mozCaptureStream) {
-//     return standby_video.mozCaptureStream();
-//   }
-//   return standby_video.captureStream();
-// }
-
-// function toggleMute() {
-//   if (!currentStream) return;
-//   const audioTracks = currentStream.getAudioTracks();
-
-//   if (!audioTracks.length > 0) return;
-//   const track = audioTracks[0];
-
-//   // Stop the track if muted, otherwise restart it
-//   if (isMuted) {
-//     track.enabled = true; // Unmute
-//   } else {
-//     track.enabled = false; // Mute
-//   }
-
-//   isMuted = !isMuted;
-//   mute_btn.innerText = isMuted ? "Unmute" : "Mute";
-
-//   Object.values(peer.connections).forEach((connection) => {
-//     connection.forEach((conn) => {
-//       if (!conn.peerConnection) return;
-//       conn.peerConnection.getSenders().forEach((sender) => {
-//         if (sender.track && sender.track.kind === "audio") {
-//           sender.replaceTrack(track);
-//         }
-//       });
-//     });
-//   });
-// }
-
-// function resetMute() {
-//   isMuted = false;
-//   mute_btn.innerText = "Mute";
-//   mute_btn.disabled = true;
-// }
-
-// v: InCommingCoreConnectionRequests related functions
+/*
+  Start v: InCommingCoreConnectionRequests related functions
+*/
 function renderInCommingCoreConnectionRequests() {
   incommingCallsContainer.innerHTML = "";
   const arr = Array.from(inCommingCoreConnectionRequests.values());
@@ -519,8 +336,13 @@ function removeInCommingCoreConnectionRequest(peerId) {
   inCommingCoreConnectionRequests.delete(peerId);
   renderInCommingCoreConnectionRequests();
 }
+/*
+  End v: InCommingCoreConnectionRequests related functions
+*/
 
-// v: OutGoingCoreConnectionRequests related functions
+/*
+  Start v: OutGoingCoreConnectionRequests related functions
+*/
 function renderOutGoingCoreConnectionRequests() {
   outgoingCallsContainer.innerHTML = "";
   const arr = Array.from(outGoingCoreConnectionRequests.values());
@@ -566,33 +388,52 @@ function cancelOutGoingCoreConnectionRequest(peerId) {
   call.close();
   removeOutGoingCoreConnectionRequest(peerId);
 }
+/*
+  End v: OutGoingCoreConnectionRequests related functions
+*/
 
-// Call related functions
-// function getActiveCall() {
-//   // Loop through all connections
-//   for (const [peerId, connections] of Object.entries(peer.connections)) {
-//     for (const conn of connections) {
-//       // Check if the connection is a call and if it has an active stream
-//       if (conn.peerConnection) {
-//         const senders = conn.peerConnection.getSenders();
-//         for (const sender of senders) {
-//           if (sender.track && sender.track.kind === "video") {
-//             return conn; // Return the active call
-//           }
-//         }
-//       }
-//     }
-//   }
-//   return null;
-// }
+/*
+  Start : Voice related functions
+*/
+async function setupVoiceCall(call) {
+  const localAudioStream = await getLocalAudioStream();
+  call.answer(localAudioStream);
 
-// function cancelAllOutgoingCalls() {
-//   for (const call of outgoingCalls.values()) {
-//     call.close();
-//   }
-//   outgoingCalls.clear();
-//   renderCalls();
-// }
+  call.on("stream", handleVoiceCallStream);
+  call.on("error", handleVoiceCallError);
+  call.on("close", handleVoiceCallClose);
+}
+
+async function handleVoiceCallStream(stream) {
+  setRemoteAudioStream(stream);
+  renderRemoteAudioStream();
+  visualizeAudioStream(stream, "remote-stream-canvas");
+}
+
+function handleVoiceCallError(err) {
+  console.error(err);
+}
+
+function handleVoiceCallClose() {
+  console.log("Voice call closed");
+
+  voiceCall = undefined;
+  resetVoiceCall();
+}
+
+function resetVoiceCall() {
+  //
+}
+
+function closeVoiceCall() {
+  if (voiceCall && voiceCall.open) {
+    voiceCall.close();
+  }
+}
+
+/*  
+  End : Voice related functions
+*/
 
 /*
   Start : File sharing related functions
@@ -914,3 +755,263 @@ function closeChatConnection() {
 /*
   End : Chat related functions
 */
+
+// call related functions
+// function handleCallStream(stream) {
+//   gotRemoteStream(stream);
+//   peerId_input.value = getActiveCall().peer;
+
+//   chatChannel = peer.connect(getActiveCall().peer);
+//   setupChatChannel(chatChannel);
+
+//   turnOnFileSharing();
+
+//   hangup_btn.disabled = false;
+
+//   updateConnectionStatus("Connected");
+// }
+
+// function handleCallError(err) {
+//   pushAlert("Call Offer No Longer Valid", "danger");
+//   updateConnectionStatus("Error");
+// }
+
+// function handleCallClose() {
+//   updateConnectionStatus("Connection closed");
+//   hangup();
+// }
+
+// async function call() {
+//   if (!currentStream) {
+//     currentStream = await getStreamByShareType();
+//   }
+//   gotLocalStream(currentStream);
+//   const call = peer.call(getOtherPeerId(), currentStream);
+
+//   call.on("stream", handleCallStream);
+
+//   call.on("error", handleCallError);
+
+//   call.on("close", handleCallClose);
+// }
+
+// async function answerCall(callPeerId) {
+//   const call = incomingCalls.get(callPeerId);
+//   if (!call) {
+//     alert("Call not found");
+//     removeCall(callPeerId);
+//     return;
+//   }
+
+//   if (getActiveCall()) {
+//     const areYouSure = confirm(
+//       "You are already in a call. Do you want to hang up and answer this call?"
+//     );
+//     if (!areYouSure) return;
+//     hangup();
+//   } else {
+//     const areYouSure = confirm("Do you want to answer this call?");
+//     if (!areYouSure) return;
+//   }
+
+//   cancelAllOutgoingCalls();
+
+//   if (!currentStream) {
+//     currentStream = await getStreamByShareType();
+//   }
+//   gotLocalStream(currentStream);
+//   call.answer(currentStream);
+
+//   call.on("stream", handleCallStream);
+
+//   call.on("error", handleCallError);
+
+//   call.on("close", handleCallClose);
+
+//   removeCall(callPeerId);
+// }
+
+// function hangup() {
+//   const activeCall = getActiveCall();
+//   if (activeCall) {
+//     activeCall.close();
+//   }
+
+//   updateConnectionStatus("idle");
+//   gotLocalStream(getStandbyStream());
+//   gotRemoteStream(null);
+
+//   if (currentStream) {
+//     currentStream.getTracks().forEach((track) => track.stop());
+//     currentStream = null;
+//   }
+
+//   hangup_btn.disabled = true;
+
+//   closeChatChannel();
+//   shareChoice_select.value = "none";
+//   validatePeerIdInput();
+
+//   resetFileSharing();
+// }
+
+// // stream related functions
+// function gotLocalStream(stream) {
+//   setLocalVideoStream(stream);
+// }
+
+// function gotRemoteStream(stream) {
+//   setRemoteVideoStream(stream);
+// }
+
+// async function toggleStream() {
+//   if (currentStream) {
+//     currentStream.getTracks().forEach((track) => track.stop());
+//   }
+
+//   currentStream = await getStreamByShareType();
+//   gotLocalStream(currentStream);
+
+//   Object.values(peer.connections).forEach((connection) => {
+//     connection.forEach((conn) => {
+//       if (!conn.peerConnection) return;
+//       conn.peerConnection.getSenders().forEach((sender) => {
+//         if (!sender.track) return;
+
+//         if (sender.track.kind === "video") {
+//           sender.replaceTrack(currentStream.getVideoTracks()[0]);
+//         } else if (sender.track.kind === "audio") {
+//           sender.replaceTrack(currentStream.getAudioTracks()[0]);
+//         }
+//       });
+//     });
+//   });
+// }
+
+// async function getUserMediaStream() {
+//   const res = await navigator.mediaDevices.getUserMedia({
+//     video: true,
+//     audio: true,
+//   });
+//   resetMute();
+//   mute_btn.disabled = false;
+//   return res;
+// }
+
+// async function getDisplayMediaStream() {
+//   const res = await navigator.mediaDevices.getDisplayMedia({
+//     video: true,
+//     audio: true,
+//   });
+//   resetMute();
+//   return res;
+// }
+
+// async function getStreamByShareType() {
+//   const shareType = shareChoice_select.value;
+//   if (shareType === "camera") {
+//     return await getUserMediaStream();
+//   } else if (shareType === "screen") {
+//     return await getDisplayMediaStream();
+//   } else if (shareType === "none") {
+//     return getStandbyStream();
+//   } else {
+//     console.error("Invalid share type");
+//     return await getUserMediaStream();
+//   }
+// }
+
+// function getStandbyStream() {
+//   resetMute();
+//   if (standby_video.mozCaptureStream) {
+//     return standby_video.mozCaptureStream();
+//   }
+//   return standby_video.captureStream();
+// }
+
+// function toggleMute() {
+//   if (!currentStream) return;
+//   const audioTracks = currentStream.getAudioTracks();
+
+//   if (!audioTracks.length > 0) return;
+//   const track = audioTracks[0];
+
+//   // Stop the track if muted, otherwise restart it
+//   if (isMuted) {
+//     track.enabled = true; // Unmute
+//   } else {
+//     track.enabled = false; // Mute
+//   }
+
+//   isMuted = !isMuted;
+//   mute_btn.innerText = isMuted ? "Unmute" : "Mute";
+
+//   Object.values(peer.connections).forEach((connection) => {
+//     connection.forEach((conn) => {
+//       if (!conn.peerConnection) return;
+//       conn.peerConnection.getSenders().forEach((sender) => {
+//         if (sender.track && sender.track.kind === "audio") {
+//           sender.replaceTrack(track);
+//         }
+//       });
+//     });
+//   });
+// }
+
+// function resetMute() {
+//   isMuted = false;
+//   mute_btn.innerText = "Mute";
+//   mute_btn.disabled = true;
+// }
+
+// Call related functions
+// function getActiveCall() {
+//   // Loop through all connections
+//   for (const [peerId, connections] of Object.entries(peer.connections)) {
+//     for (const conn of connections) {
+//       // Check if the connection is a call and if it has an active stream
+//       if (conn.peerConnection) {
+//         const senders = conn.peerConnection.getSenders();
+//         for (const sender of senders) {
+//           if (sender.track && sender.track.kind === "video") {
+//             return conn; // Return the active call
+//           }
+//         }
+//       }
+//     }
+//   }
+//   return null;
+// }
+
+// function cancelAllOutgoingCalls() {
+//   for (const call of outgoingCalls.values()) {
+//     call.close();
+//   }
+//   outgoingCalls.clear();
+//   renderCalls();
+// }
+
+// functions
+// async function updateVoiceCallPeerStream() {
+//   if (!voiceCall) return;
+//   const newStream = await getLocalAudioStream();
+//   __updatePeerConnectionStream(voiceCall.peerConnection, newStream);
+// }
+
+// async function __updatePeerConnectionStream(peerConnection, newStream) {
+//   const senders = peerConnection.getSenders();
+
+//   senders.forEach(async (sender) => {
+//     if (sender.track.kind === "audio") {
+//       await peerConnection
+//         .getTransceivers()
+//         .find((t) => t.sender === sender)
+//         .sender.replaceTrack(newStream.getAudioTracks()[0]);
+//     } else if (sender.track.kind === "video") {
+//       await peerConnection
+//         .getTransceivers()
+//         .find((t) => t.sender === sender)
+//         .sender.replaceTrack(newStream.getVideoTracks()[0]);
+//     }
+//   });
+// }
