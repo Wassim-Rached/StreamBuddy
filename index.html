@@ -59,10 +59,14 @@
         <!-- <button disabled id="call-btn" class="btn btn-primary btn-custom">
           Call
         </button> -->
-        <button id="connect-btn" class="btn btn-primary btn-custom">
+        <button id="connect-btn" class="btn btn-sm btn-primary btn-custom">
           Connect
         </button>
-        <button disabled id="hangup-btn" class="btn btn-danger btn-custom">
+        <button
+          disabled
+          id="hangup-btn"
+          class="btn btn-sm btn-danger btn-custom"
+        >
           Hangup
         </button>
         <!-- <button
@@ -100,13 +104,13 @@
             <div>
               <button
                 id="audio-test-btn"
-                class="btn btn-outline-secondary btn-custom"
+                class="btn btn-sm btn-outline-secondary btn-custom"
               >
                 Test Audio
               </button>
               <button
                 id="toogle-audio-settings"
-                class="btn btn-primary btn-custom"
+                class="btn btn-sm btn-primary btn-custom"
               >
                 Audio Settings
               </button>
@@ -203,17 +207,41 @@
               </div>
             </div>
             <div class="row">
-              <div class="col-md-4 mb-3">
-                <h5>local audio</h5>
-                <canvas id="local-stream-canvas"></canvas>
+              <div class="col-md-4 mb-4">
+                <div
+                  class="d-flex flex-column align-items-center p-3 border rounded bg-light shadow-sm"
+                >
+                  <h5 class="mb-3">Local Audio</h5>
+                  <canvas
+                    id="local-stream-canvas"
+                    class="w-100"
+                    style="height: 150px"
+                  ></canvas>
+                </div>
               </div>
-              <div class="col-md-4 mb-3">
-                <h5>test audio</h5>
-                <canvas id="test-stream-canvas"></canvas>
+              <div class="col-md-4 mb-4">
+                <div
+                  class="d-flex flex-column align-items-center p-3 border rounded bg-light shadow-sm"
+                >
+                  <h5 class="mb-3">Test Audio</h5>
+                  <canvas
+                    id="test-stream-canvas"
+                    class="w-100"
+                    style="height: 150px"
+                  ></canvas>
+                </div>
               </div>
-              <div class="col-md-4 mb-3">
-                <h5>remote audio</h5>
-                <canvas id="remote-stream-canvas"></canvas>
+              <div class="col-md-4 mb-4">
+                <div
+                  class="d-flex flex-column align-items-center p-3 border rounded bg-light shadow-sm"
+                >
+                  <h5 class="mb-3">Remote Audio</h5>
+                  <canvas
+                    id="remote-stream-canvas"
+                    class="w-100"
+                    style="height: 150px"
+                  ></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -266,14 +294,14 @@
           </div> -->
         </div>
       </div>
-      <div id="videos" class="d-flex gap-3 mt-4">
+      <!-- <div id="videos" class="d-flex gap-3 mt-4">
         <div class="video-container">
           <video id="local-video" playsinline autoplay muted></video>
         </div>
         <div class="video-container">
           <video id="remote-video" playsinline autoplay></video>
         </div>
-      </div>
+      </div> -->
       <div class="chat-container mt-4">
         <div class="chat-box-container">
           <div class="chat-box" id="chat-box"></div>

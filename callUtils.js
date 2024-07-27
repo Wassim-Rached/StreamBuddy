@@ -334,9 +334,8 @@ function visualizeAudioStream(stream, canvasId) {
 
   // Create a canvas element to draw the visualization
   const canvas = document.getElementById(canvasId);
-  console.log({ canvas });
-  canvas.width = 300;
-  canvas.height = 100;
+  // canvas.width = 300;
+  // canvas.height = 100;
 
   const canvasCtx = canvas.getContext("2d");
   const bufferLength = analyser.frequencyBinCount;

@@ -164,3 +164,7 @@ body {
 [disabled] {
   cursor: not-allowed !important;
 }
+
+canvas {
+  background-color: #000;
+}
