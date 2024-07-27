@@ -194,12 +194,16 @@ function handleAudioOutputDeviceChange() {
 }
 
 async function refreshLocalAndTestAudioStream() {
+  const currentlyTesting = !testAudio.muted;
+
   clearLocalAudioStream();
   clearTestAudioStream();
   clearAudioContext();
 
   await getLocalAudioStream();
-  await getTestAudioStream();
+  if (currentlyTesting) {
+    await getTestAudioStream();
+  }
 
   await changeLocalStreamVolume(getAudioInputVolume());
   await changeTestStreamVolume(getAudioInputVolume());
