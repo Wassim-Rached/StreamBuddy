@@ -127,12 +127,42 @@
           </div> -->
 
           <div id="audio-settings" style="display: none">
+            <div class="row mt-3">
+              <div class="col-md-4 mb-3">
+                <label for="noise-suppression-option" class="form-label">
+                  Noise Suppression:
+                </label>
+                <select class="form-select" id="noise-suppression-option">
+                  <option value="false">Off</option>
+                  <option value="true">On</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="echo-cancellation-option" class="form-label">
+                  Echo Cancellation:
+                </label>
+                <select class="form-select" id="echo-cancellation-option">
+                  <option value="false">Off</option>
+                  <option value="true">On</option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="agc-option" class="form-label">
+                  Auto Gain Control:
+                </label>
+                <select class="form-select" id="agc-option">
+                  <option value="false">Off</option>
+                  <option value="true">On</option>
+                </select>
+              </div>
+            </div>
+
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label for="audioDeviceInputOption" class="form-label">
                   Audio Source:
                 </label>
-                <select class="form-select" id="audioDeviceInputOption">
+                <select class="form-select" id="audio-device-input-option">
                   <option value="none">Nothing</option>
                 </select>
               </div>
@@ -140,7 +170,7 @@
                 <label for="audioDeviceOutputOption" class="form-label">
                   Audio Output:
                 </label>
-                <select class="form-select" id="audioDeviceOutputOption">
+                <select class="form-select" id="audio-device-output-option">
                   <option value="none">Nothing</option>
                 </select>
               </div>

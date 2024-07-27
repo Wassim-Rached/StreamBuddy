@@ -1,9 +1,16 @@
 const audioDeviceOutputOption = document.getElementById(
-  "audioDeviceInputOption"
+  "audio-device-output-option"
 );
 const audioDeviceInputOption = document.getElementById(
-  "audioDeviceOutputOption"
+  "audio-device-input-option"
 );
+const noiseSuppressionOption = document.getElementById(
+  "noise-suppression-option"
+);
+const echoCancellationOption = document.getElementById(
+  "echo-cancellation-option"
+);
+const agcOption = document.getElementById("agc-option");
 const audioCheckbox = document.getElementById("audio-checkbox");
 const localAudio = document.getElementById("local-audio");
 const testAudio = document.getElementById("test-audio");
@@ -33,12 +40,28 @@ toogleAudioSettingsBtn.addEventListener("click", toogleShowingAudioSettings);
 audioInputVolume.addEventListener("input", handleAudioInputVolumeChange);
 audioOutputVolume.addEventListener("input", handleAudioOutputVolumeChange);
 audioTestBtn.addEventListener("click", toogleListenToTestAudio);
+audioDeviceOutputOption.addEventListener(
+  "change",
+  handleAudioOutputDeviceChange
+);
+audioDeviceInputOption.addEventListener(
+  "change",
+  refreshLocalAndTestAudioStream
+);
+noiseSuppressionOption.addEventListener(
+  "change",
+  refreshLocalAndTestAudioStream
+);
+echoCancellationOption.addEventListener(
+  "change",
+  refreshLocalAndTestAudioStream
+);
+agcOption.addEventListener("change", refreshLocalAndTestAudioStream);
 
 // variables
 let __localAudioStream = null;
 let __remoteAudioStream = null;
 let __testAudioStream = null;
-let __audioInputDeviceId = null;
 
 // variables functions
 async function getLocalAudioStream() {
@@ -56,26 +79,34 @@ async function getLocalAudioStream() {
   }
   return __localAudioStream;
 }
+function clearLocalAudioStream() {
+  if (__localAudioStream) {
+    __localAudioStream.getAudioTracks().forEach((track) => {
+      track.stop();
+    });
+  }
+  __localAudioStream = null;
+}
 async function getDestinationStream() {
   if (!destination) {
     await getLocalAudioStream();
   }
   return destination.stream;
 }
-function updateLocalAudioStreamTracks(newStream) {
-  const newAudioTrack = newStream.getAudioTracks()[0];
-  const oldAudioTrack = __localAudioStream.getAudioTracks()[0];
+// function updateLocalAudioStreamTracks(newStream) {
+//   const newAudioTrack = newStream.getAudioTracks()[0];
+//   const oldAudioTrack = __localAudioStream.getAudioTracks()[0];
 
-  // Replace the old audio track with the new one
-  __localAudioStream.removeTrack(oldAudioTrack);
-  __localAudioStream.addTrack(newAudioTrack);
+//   // Replace the old audio track with the new one
+//   __localAudioStream.removeTrack(oldAudioTrack);
+//   __localAudioStream.addTrack(newAudioTrack);
 
-  console.log("local audio stream updated with new track");
-  // updateVoiceCallPeerStreamWithNewTrack(oldAudioTrack, newAudioTrack);
+//   console.log("local audio stream updated with new track");
+//   // updateVoiceCallPeerStreamWithNewTrack(oldAudioTrack, newAudioTrack);
 
-  //
-  renderLocalAudioStream(destination.stream);
-}
+//   //
+//   renderLocalAudioStream(destination.stream);
+// }
 function getRemoteAudioStream() {
   return __remoteAudioStream;
 }
@@ -95,17 +126,34 @@ async function getTestAudioStream() {
 
   return __testAudioStream;
 }
-function getAudioInputDeviceId() {
-  return __audioInputDeviceId;
+function clearTestAudioStream() {
+  if (__testAudioStream) {
+    __testAudioStream.getAudioTracks().forEach((track) => {
+      track.stop();
+    });
+  }
+  __testAudioStream = null;
 }
-function setAudioInputDeviceId(deviceId) {
-  __audioInputDeviceId = deviceId;
+function getAudioInputDeviceId() {
+  return audioDeviceInputOption.value;
+}
+function getAudioOutputDeviceId() {
+  return audioDeviceOutputOption.value;
 }
 function getAudioInputVolume() {
   return audioInputVolume.value;
 }
 function getAudioOutputVolume() {
   return audioOutputVolume.value;
+}
+function getNoiseSuppression() {
+  return noiseSuppressionOption.value === "true";
+}
+function getEchoCancellation() {
+  return echoCancellationOption.value === "true";
+}
+function getAGC() {
+  return agcOption.value === "true";
 }
 
 // functions
@@ -137,6 +185,26 @@ async function handleAudioInputVolumeChange() {
 async function handleAudioOutputVolumeChange() {
   const volume = getAudioOutputVolume() / 100;
   remoteAudio.volume = volume;
+}
+
+function handleAudioOutputDeviceChange() {
+  const deviceId = getAudioOutputDeviceId();
+  remoteAudio.setSinkId(deviceId);
+  testAudio.setSinkId(deviceId);
+}
+
+async function refreshLocalAndTestAudioStream() {
+  clearLocalAudioStream();
+  clearTestAudioStream();
+  clearAudioContext();
+
+  await getLocalAudioStream();
+  await getTestAudioStream();
+
+  await changeLocalStreamVolume(getAudioInputVolume());
+  await changeTestStreamVolume(getAudioInputVolume());
+
+  window.dispatchEvent(updatePeerConnectionWithNewAudioTrackEvent);
 }
 
 function toogleShowingAudioSettings() {
@@ -182,9 +250,15 @@ async function renderAudioOutputDevices() {
 
 // stream related functions
 async function loadNewAudioStream() {
-  console.log("new local stream created");
+  const deviceId = getAudioInputDeviceId();
+  console.log("new local stream created with device id", deviceId);
   return await navigator.mediaDevices.getUserMedia({
-    audio: true,
+    audio: {
+      deviceId: { exact: deviceId },
+      echoCancellation: getEchoCancellation(),
+      noiseSuppression: getNoiseSuppression(),
+      autoGainControl: getAGC(),
+    },
   });
 }
 
@@ -315,6 +389,14 @@ function initializeAudioContext() {
   }
 }
 
+function clearAudioContext() {
+  audioContext = null;
+  gainNode = null;
+  testGainNode = null;
+  destination = null;
+  testDestination = null;
+}
+
 function setupLocalAudioStream(localAudioStream) {
   if (!audioContext) {
     throw new Error(
@@ -322,6 +404,7 @@ function setupLocalAudioStream(localAudioStream) {
     );
   }
 
+  console.log({ localAudioStream });
   const source = audioContext.createMediaStreamSource(localAudioStream);
   source.connect(gainNode);
   gainNode.connect(destination);
@@ -358,6 +441,7 @@ async function changeTestStreamVolume(volume) {
 }
 
 function updatePeerConnectionWithNewAudioTrack(peerConnection) {
+  console.log("updating peer connection with new audio track");
   const newAudioTrack = destination.stream.getAudioTracks()[0];
   const sender = peerConnection
     .getSenders()
