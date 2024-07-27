@@ -89,7 +89,8 @@ window.addEventListener(
 );
 window.addEventListener("coreConnectionHangup", onCoreConnectionHangup);
 window.addEventListener("updatePeerConnectionWithNewAudioTrack", () => {
-  console.log("received updatePeerConnectionWithNewAudioTrack event");
+  if (!voiceCall) return;
+  console.log("Updating peer connection with new audio track");
   updatePeerConnectionWithNewAudioTrack(voiceCall.peerConnection);
 });
 
@@ -104,7 +105,7 @@ async function onCoreConnectionEstablishedSuccessfully() {
   if (getAmiTheSender()) {
     console.log("i am the sender");
     // voice related
-    const localAudioStream = await getLocalAudioStream();
+    const localAudioStream = await getDestinationStream();
     voiceCall = peer.call(coreConnection.peer, localAudioStream, {
       metadata: { type: "voice" },
     });
@@ -400,7 +401,7 @@ function cancelOutGoingCoreConnectionRequest(peerId) {
   Start : Voice related functions
 */
 async function setupVoiceCall(call) {
-  const localAudioStream = await getLocalAudioStream();
+  const localAudioStream = await getDestinationStream();
   call.answer(localAudioStream);
 
   call.on("stream", handleVoiceCallStream);

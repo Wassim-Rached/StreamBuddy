@@ -37,22 +37,30 @@ audioTestBtn.addEventListener("click", toogleListenToTestAudio);
 // variables
 let __localAudioStream = null;
 let __remoteAudioStream = null;
+let __testAudioStream = null;
 let __audioInputDeviceId = null;
 
 // variables functions
 async function getLocalAudioStream() {
   if (!__localAudioStream) {
+    console.log("creating new local audio stream");
     __localAudioStream = await loadNewAudioStream();
     // this part is called whenever new audio stream is created
     const shouldBeMuted = !audioCheckbox.checked;
     if (shouldBeMuted) {
       muteAudioStream(__localAudioStream);
     }
-    await initializeAudioContext(__localAudioStream);
-    visualizeAudioStream(__localAudioStream, "local-stream-canvas");
-    renderLocalAudioStream();
+    initializeAudioContext();
+    setupLocalAudioStream(__localAudioStream);
+    renderLocalAudioStream(__localAudioStream);
   }
   return __localAudioStream;
+}
+async function getDestinationStream() {
+  if (!destination) {
+    await getLocalAudioStream();
+  }
+  return destination.stream;
 }
 function updateLocalAudioStreamTracks(newStream) {
   const newAudioTrack = newStream.getAudioTracks()[0];
@@ -66,7 +74,7 @@ function updateLocalAudioStreamTracks(newStream) {
   // updateVoiceCallPeerStreamWithNewTrack(oldAudioTrack, newAudioTrack);
 
   //
-  renderLocalAudioStream();
+  renderLocalAudioStream(destination.stream);
 }
 function getRemoteAudioStream() {
   return __remoteAudioStream;
@@ -75,13 +83,17 @@ function setRemoteAudioStream(stream) {
   __remoteAudioStream = stream;
 }
 async function getTestAudioStream() {
-  // clone local stream
-  const stream = (await getLocalAudioStream()).clone();
-  // make sure its not muted
-  stream.getAudioTracks().forEach((track) => {
-    track.enabled = true;
-  });
-  return stream;
+  if (!__testAudioStream) {
+    console.log("creating new test audio stream");
+    __testAudioStream = await loadNewAudioStream();
+
+    // this part is called whenever new test audio stream is created
+    initializeAudioContext();
+    setupTestAudioStream(__testAudioStream);
+    renderTestAudioStream(testDestination.stream);
+  }
+
+  return __testAudioStream;
 }
 function getAudioInputDeviceId() {
   return __audioInputDeviceId;
@@ -108,34 +120,21 @@ async function handleAudioCheckboxChange() {
 }
 
 async function handleAudioInputVolumeChange() {
-  console.log("audio input volume changed to", getAudioInputVolume());
-  changeLocalStreamVolume(getAudioInputVolume());
+  const newVolume = getAudioInputVolume();
+
+  await changeLocalStreamVolume(newVolume);
+  await changeTestStreamVolume(newVolume);
 
   window.dispatchEvent(updatePeerConnectionWithNewAudioTrackEvent);
-  localAudio.srcObject = destination.stream;
-  // const localStream = await getLocalAudioStream();
-  // const newLocalStream = changeStreamVolume;
-  // // updateLocalAudioStreamTracks(newLocalStream);
-  // //
-  // updatePeerConnectionWithNewAudioTrack(peerConnection);
-  // localAudio.srcObject = newLocalStream;
-  // changeLocalStreamVolume
+  renderLocalAudioStream(destination.stream);
 
-  // bit of bad code here tbh
-  // const testStream = await getTestAudioStream();
-  // testAudio.srcObject = testStream;
-
-  // const newTestStream = await changeStreamVolume(
-  //   testStream,
-  //   getAudioInputVolume()
-  // );
-  // console.log({ newTestStream });
+  const isTestAudioOn = !testAudio.muted;
+  if (isTestAudioOn) {
+    renderTestAudioStream(testDestination.stream);
+  }
 }
 
 async function handleAudioOutputVolumeChange() {
-  console.log("audio output volume changed to", getAudioOutputVolume());
-
-  // changeStreamVolume(getRemoteAudioStream(), getAudioOutputVolume());
   const volume = getAudioOutputVolume() / 100;
   remoteAudio.volume = volume;
 }
@@ -189,10 +188,14 @@ async function loadNewAudioStream() {
   });
 }
 
-async function renderLocalAudioStream() {
-  console.log("rendering local audio stream");
-  const stream = await getLocalAudioStream();
+function renderLocalAudioStream(stream) {
   localAudio.srcObject = stream;
+  visualizeAudioStream(stream, "local-stream-canvas");
+}
+
+function renderTestAudioStream(stream) {
+  testAudio.srcObject = stream;
+  visualizeAudioStream(stream, "test-stream-canvas");
 }
 
 async function renderRemoteAudioStream() {
@@ -200,74 +203,47 @@ async function renderRemoteAudioStream() {
   remoteAudio.srcObject = stream;
 }
 
-async function muteAudioStream(stream) {
+function muteAudioStream(stream) {
   stream.getAudioTracks().forEach((track) => {
     track.enabled = false;
   });
 }
 
-async function unmuteAudioStream(stream) {
+function unmuteAudioStream(stream) {
   stream.getAudioTracks().forEach((track) => {
     track.enabled = true;
   });
 }
 
 async function toogleListenToTestAudio() {
-  console.log("toogleListenToTestAudio");
   const isListening = !testAudio.muted;
 
   if (isListening) {
-    console.log("turning off test audio");
     turnOffTestAudio();
   } else {
-    console.log("turning on test audio");
     turnOnTestAudio();
   }
 }
 
 async function turnOnTestAudio() {
-  const oldStream = testAudio.srcObject;
-  if (oldStream) {
-    oldStream.getTracks().forEach((track) => track.stop());
-    testAudio.srcObject = null;
-  }
+  const testStream = await getTestAudioStream();
+  unmuteAudioStream(testStream);
 
-  const stream = await getTestAudioStream();
-  testAudio.srcObject = stream;
+  testAudio.srcObject = testDestination.stream;
   testAudio.muted = false;
   audioTestBtn.innerText = "Stop Test";
-  visualizeAudioStream(stream, "test-stream-canvas");
 }
 
-function turnOffTestAudio() {
-  const oldStream = testAudio.srcObject;
-  if (oldStream) {
-    oldStream.getTracks().forEach((track) => track.stop());
-    testAudio.srcObject = null;
-  }
+async function turnOffTestAudio() {
+  const testStream = await getTestAudioStream();
+  muteAudioStream(testStream);
 
+  testAudio.srcObject = testDestination.stream;
   testAudio.muted = true;
-  testAudio.srcObject = null;
   audioTestBtn.innerText = "Test Audio";
 }
 
-// audio helpers
-// async function changeStreamVolume(stream, volume) {
-//   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-//   const gainNode = audioContext.createGain();
-//   const destination = audioContext.createMediaStreamDestination();
-
-//   const source = audioContext.createMediaStreamSource(stream);
-
-//   source.connect(gainNode);
-//   gainNode.connect(destination);
-
-//   gainNode.gain.value = volume / 100;
-//   console.log({ volume: gainNode.gain.value });
-
-//   return destination.stream;
-// }
-
+// visualization
 function visualizeAudioStream(stream, canvasId) {
   // Create an audio context
   const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -323,27 +299,62 @@ function visualizeAudioStream(stream, canvasId) {
 // volume related functions
 let audioContext;
 let gainNode;
+let testGainNode;
 let destination;
+let testDestination;
 
-async function initializeAudioContext(stream) {
+function initializeAudioContext() {
   if (!audioContext) {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    gainNode = audioContext.createGain();
-    destination = audioContext.createMediaStreamDestination();
 
-    const source = audioContext.createMediaStreamSource(stream);
-    source.connect(gainNode);
-    gainNode.connect(destination);
+    gainNode = audioContext.createGain();
+    testGainNode = audioContext.createGain();
+
+    destination = audioContext.createMediaStreamDestination();
+    testDestination = audioContext.createMediaStreamDestination();
   }
 }
 
-function changeLocalStreamVolume(volume) {
-  if (gainNode) {
-    gainNode.gain.value = volume / 100;
-    console.log({ volume: gainNode.gain.value });
-  } else {
-    console.error("trying to change volume without initializing audio context");
+function setupLocalAudioStream(localAudioStream) {
+  if (!audioContext) {
+    throw new Error(
+      "Audio context is not initialized. Call initializeAudioContext() first."
+    );
   }
+
+  const source = audioContext.createMediaStreamSource(localAudioStream);
+  source.connect(gainNode);
+  gainNode.connect(destination);
+}
+
+function setupTestAudioStream(testAudioStream) {
+  if (!audioContext) {
+    throw new Error(
+      "Audio context is not initialized. Call initializeAudioContext() first."
+    );
+  }
+
+  const testSource = audioContext.createMediaStreamSource(testAudioStream);
+  testSource.connect(testGainNode);
+  testGainNode.connect(testDestination);
+}
+
+async function changeLocalStreamVolume(volume) {
+  console.log("changing local stream volume to", volume);
+  if (!gainNode) {
+    // initialize audio context if not already initialized
+    await getLocalAudioStream();
+  }
+  gainNode.gain.value = volume / 100;
+}
+
+async function changeTestStreamVolume(volume) {
+  console.log("changing test stream volume to", volume);
+  if (!testGainNode) {
+    // initialize audio context if not already initialized
+    await getTestAudioStream();
+  }
+  testGainNode.gain.value = volume / 100;
 }
 
 function updatePeerConnectionWithNewAudioTrack(peerConnection) {
@@ -356,5 +367,24 @@ function updatePeerConnectionWithNewAudioTrack(peerConnection) {
     sender.replaceTrack(newAudioTrack);
   } else {
     peerConnection.addTrack(newAudioTrack, destination.stream);
+  }
+}
+
+// permissions and errors
+async function checkMicrophonePermission() {
+  try {
+    const permissionStatus = await navigator.permissions.query({
+      name: "microphone",
+    });
+
+    if (permissionStatus.state === "denied") {
+      document.getElementById("status-message").innerText =
+        "Microphone access is denied. Please allow microphone access in your browser settings.";
+    } else {
+      requestMicrophoneAccess();
+    }
+  } catch (error) {
+    console.error("Error checking microphone permission:", error);
+    requestMicrophoneAccess(); // Fallback in case of error
   }
 }
