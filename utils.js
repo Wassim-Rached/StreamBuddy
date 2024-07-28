@@ -2,7 +2,6 @@ const alertsContainer = document.getElementById("alerts-container");
 const copy_btn = document.getElementById("copy-btn");
 const connectionStatus = document.getElementById("connection-status");
 const chatBox = document.getElementById("chat-box");
-const localVideo = document.getElementById("local-video");
 const remoteVideo = document.getElementById("remote-video");
 const isTypingIndicator = document.getElementById("is-typing-indicator");
 
@@ -114,45 +113,38 @@ copy_btn.addEventListener("click", () => {
 });
 
 // video related functions
-function setLocalVideoStream(stream) {
-  localVideo.srcObject = stream;
-}
 
-function setRemoteVideoStream(stream) {
-  remoteVideo.srcObject = stream;
-}
+// function toggleFullScreen(videoId) {
+//   const videoElement = document.getElementById(videoId);
+//   const button = videoElement.nextElementSibling;
 
-function toggleFullScreen(videoId) {
-  const videoElement = document.getElementById(videoId);
-  const button = videoElement.nextElementSibling;
-
-  if (!document.fullscreenElement) {
-    if (videoElement.requestFullscreen) {
-      videoElement.requestFullscreen();
-    } else if (videoElement.mozRequestFullScreen) {
-      // Firefox
-      videoElement.mozRequestFullScreen();
-    } else if (videoElement.webkitRequestFullscreen) {
-      // Chrome, Safari and Opera
-      videoElement.webkitRequestFullscreen();
-    } else if (videoElement.msRequestFullscreen) {
-      // IE/Edge
-      videoElement.msRequestFullscreen();
-    }
-    button.textContent = "Exit Full Screen";
-  } else {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.mozCancelFullScreen) {
-      // Firefox
-      document.mozCancelFullScreen();
-    } else if (document.webkitExitFullscreen) {
-      // Chrome, Safari and Opera
-      document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) {
-      // IE/Edge
-      document.msExitFullscreen();
-    }
-    button.textContent = "Full Screen";
-  }
-}
+//   if (!document.fullscreenElement) {
+//     if (videoElement.requestFullscreen) {
+//       videoElement.requestFullscreen();
+//     } else if (videoElement.mozRequestFullScreen) {
+//       // Firefox
+//       videoElement.mozRequestFullScreen();
+//     } else if (videoElement.webkitRequestFullscreen) {
+//       // Chrome, Safari and Opera
+//       videoElement.webkitRequestFullscreen();
+//     } else if (videoElement.msRequestFullscreen) {
+//       // IE/Edge
+//       videoElement.msRequestFullscreen();
+//     }
+//     button.textContent = "Exit Full Screen";
+//   } else {
+//     if (document.exitFullscreen) {
+//       document.exitFullscreen();
+//     } else if (document.mozCancelFullScreen) {
+//       // Firefox
+//       document.mozCancelFullScreen();
+//     } else if (document.webkitExitFullscreen) {
+//       // Chrome, Safari and Opera
+//       document.webkitExitFullscreen();
+//     } else if (document.msExitFullscreen) {
+//       // IE/Edge
+//       document.msExitFullscreen();
+//     }
+//     button.textContent = "Full Screen";
+//   }
+// }

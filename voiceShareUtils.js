@@ -93,20 +93,6 @@ async function getDestinationStream() {
   }
   return destination.stream;
 }
-// function updateLocalAudioStreamTracks(newStream) {
-//   const newAudioTrack = newStream.getAudioTracks()[0];
-//   const oldAudioTrack = __localAudioStream.getAudioTracks()[0];
-
-//   // Replace the old audio track with the new one
-//   __localAudioStream.removeTrack(oldAudioTrack);
-//   __localAudioStream.addTrack(newAudioTrack);
-
-//   console.log("local audio stream updated with new track");
-//   // updateVoiceCallPeerStreamWithNewTrack(oldAudioTrack, newAudioTrack);
-
-//   //
-//   renderLocalAudioStream(destination.stream);
-// }
 function getRemoteAudioStream() {
   return __remoteAudioStream;
 }

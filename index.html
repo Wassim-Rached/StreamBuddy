@@ -246,62 +246,63 @@
             </div>
           </div>
 
-          <!-- 
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <label for="videoShareTypeOption" class="form-label"
+          <div class="row mt-3">
+            <div class="col-md-3 mb-3">
+              <label for="video-source-option" class="form-label"
                 >Video Source:</label
               >
-              <select class="form-select" id="videoShareTypeOption">
+              <select class="form-select" id="video-source-option">
                 <option value="none">Nothing</option>
                 <option value="camera">Camera</option>
                 <option value="screen">Screen</option>
               </select>
             </div>
 
-            <div class="col-md-4 mb-3">
-              <label for="videoDeviceInputOption" class="form-label"
+            <div class="col-md-3 mb-3">
+              <label for="video-device-input-option" class="form-label"
                 >Video Input:</label
               >
-              <select class="form-select" id="videoDeviceInputOption">
-                <option value="none">Nothing</option>
+              <select
+                disabled
+                class="form-select"
+                id="video-device-input-option"
+              >
+                <option value="none">Select camera</option>
               </select>
             </div>
 
-            <div class="col-md-4 mb-3">
-              <label for="VideoDeviceResolutionOption" class="form-label"
+            <div class="col-md-3 mb-3">
+              <label for="video-device-resolution-option" class="form-label"
                 >Resolution:</label
               >
-              <select class="form-select" id="VideoDeviceResolutionOption">
-                <option value="none">Please select a camera</option>
-              </select>
+              <select
+                disabled
+                class="form-select"
+                id="video-device-resolution-option"
+              ></select>
             </div>
-          </div> -->
 
-          <!-- <div class="row">
-            <div class="col-md-12 mb-3">
-              <label for="micVolume" class="form-label"
-                >Microphone Volume:</label
+            <div class="col-md-3 mb-3">
+              <label for="video-device-frame-rate-option" class="form-label"
+                >Frame Rate:</label
               >
-              <input
-                type="range"
-                class="form-range"
-                id="micVolume"
-                min="0"
-                max="100"
-              />
+              <select
+                disabled
+                class="form-select"
+                id="video-device-frame-rate-option"
+              ></select>
             </div>
-          </div> -->
+          </div>
         </div>
       </div>
-      <!-- <div id="videos" class="d-flex gap-3 mt-4">
+      <div id="videos" class="d-flex gap-3 mt-4">
         <div class="video-container">
-          <video id="local-video" playsinline autoplay muted></video>
+          <video id="local-video" playsinline autoplay></video>
         </div>
         <div class="video-container">
           <video id="remote-video" playsinline autoplay></video>
         </div>
-      </div> -->
+      </div>
       <div class="chat-container mt-4">
         <div class="chat-box-container">
           <div class="chat-box" id="chat-box"></div>
@@ -440,28 +441,20 @@
         <source src="standBy.mp4" type="video/mp4" />
       </video>
     </div>
-    <!-- bootstra start -->
+    <!-- bootstrap -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <!-- bootstrap end -->
+    <!-- noty -->
     <script src="https://cdn.jsdelivr.net/npm/noty/lib/noty.min.js"></script>
+    <!-- plyr -->
     <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const remoteVideo = new Plyr("#remote-video", {
-          controls: ["volume", "fullscreen"],
-        });
-        const localVideo = new Plyr("#local-video", {
-          controls: [],
-        });
-      });
-    </script>
-    <script
-      src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"
-      defer
-    ></script>
-    <script src="callUtils.js" defer></script>
+    <!-- peerjs -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <!-- scripts (order shouldn't matter) -->
+    <script src="plyr.js" defer></script>
+    <script src="videoShareUtils.js" defer></script>
+    <script src="voiceShareUtils.js" defer></script>
     <script src="fileShareUtils.js" defer></script>
     <script src="utils.js" defer></script>
     <script src="main.js" defer></script>
