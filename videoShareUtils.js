@@ -12,6 +12,7 @@ const localVideo = document.getElementById("local-video");
 
 // variables
 let __localVideoStream;
+let __screenStreamInstance;
 
 // Gettters and setters
 async function getLocalVideoStream() {
@@ -26,6 +27,24 @@ function clearLocalVideoStream() {
   if (!__localVideoStream) return;
   __localVideoStream.getTracks().forEach((track) => track.stop());
   __localVideoStream = null;
+}
+async function getScreenStreamInstance() {
+  if (!__screenStreamInstance) {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false,
+    });
+    __screenStreamInstance = stream;
+  }
+  return __screenStreamInstance;
+}
+function setScreenStreamInstance(stream) {
+  __screenStreamHolder = stream;
+}
+function clearScreenStreamInstance() {
+  if (!__screenStreamInstance) return;
+  __screenStreamInstance.getTracks().forEach((track) => track.stop());
+  __screenStreamInstance = null;
 }
 function getVideoSourceOption() {
   return videoSourceOption.value;
@@ -45,7 +64,7 @@ async function getVideoSourceFrameRates() {
     case "camera":
       return await getAvailableCameraFPS();
     case "screen":
-      return [];
+      return await getAvailableScreenFPS();
     default:
       return [];
   }
@@ -56,14 +75,26 @@ async function getVideoSourceResolutions() {
     case "camera":
       return await getAvailableCameraResolutions();
     case "screen":
-      return [];
+      return await getAvailableScreenResolutions();
     default:
       return [];
   }
 }
 
 // Event bindings
+document.addEventListener("DOMContentLoaded", async () => {
+  clearCameraDevices();
+  videoSourceOption.value = "none";
+  videoDeviceInputOption.disabled = true;
+  videoDeviceFrameRateOption.disabled = true;
+  VideoDeviceResolutionOption.disabled = true;
+});
+
 videoSourceOption.addEventListener("change", handleVideoSourceChanged);
+videoDeviceInputOption.addEventListener(
+  "change",
+  handleVideoSourceSettingsChanged
+);
 videoDeviceFrameRateOption.addEventListener(
   "change",
   handleVideoSourceSettingsChanged
@@ -91,7 +122,7 @@ async function renderCameraDevices() {
   });
 }
 
-async function clearCameraDevices() {
+function clearCameraDevices() {
   videoDeviceInputOption.innerHTML = `<option value="">Choose Camera</option>`;
 }
 
@@ -117,18 +148,6 @@ async function renderVideoSourceResolutions() {
   });
 }
 
-function enableVideoSettings() {
-  videoDeviceInputOption.disabled = false;
-  videoDeviceFrameRateOption.disabled = false;
-  VideoDeviceResolutionOption.disabled = false;
-}
-
-function disableVideoSettings() {
-  videoDeviceInputOption.disabled = true;
-  videoDeviceFrameRateOption.disabled = true;
-  VideoDeviceResolutionOption.disabled = true;
-}
-
 // utility functions
 async function getAvailableCameraDevices() {
   const devices = await navigator.mediaDevices.enumerateDevices();
@@ -144,19 +163,27 @@ async function handleVideoSourceChanged() {
   if (videoSource === "camera") {
     await renderCameraDevices();
   } else {
-    await clearCameraDevices();
+    clearCameraDevices();
   }
 
-  if (videoSource === "screen" || videoSource === "camera") {
-    enableVideoSettings();
+  if (videoSource === "screen") {
+    videoDeviceInputOption.disabled = true;
+    videoDeviceFrameRateOption.disabled = false;
+    VideoDeviceResolutionOption.disabled = false;
+  } else if (videoSource === "camera") {
+    videoDeviceInputOption.disabled = false;
+    videoDeviceFrameRateOption.disabled = false;
+    VideoDeviceResolutionOption.disabled = false;
   } else {
-    disableVideoSettings();
+    videoDeviceInputOption.disabled = true;
+    videoDeviceFrameRateOption.disabled = true;
+    VideoDeviceResolutionOption.disabled = true;
   }
+
+  await renderLocalVideoStream();
 
   await renderVideoSourceResolutions();
   await renderVideoSourceFrameRates();
-
-  await renderLocalVideoStream();
 }
 
 async function handleVideoSourceSettingsChanged() {
@@ -183,22 +210,22 @@ async function loadCameraStream() {
   const width = parseInt(getVideoDeviceResolution().split("x")[0]);
   const height = parseInt(getVideoDeviceResolution().split("x")[1]);
   const fps = parseInt(getVideoDeviceFrameRate());
+  console.log(width, height, fps, getVideoDeviceId());
   return await navigator.mediaDevices.getUserMedia({
     video: {
-      deviceId: { exact: getVideoDeviceId() },
-      frameRate: { exact: fps },
-      width: { exact: width },
-      height: { exact: height },
+      deviceId: { exact: getVideoDeviceId() || undefined },
+      frameRate: { exact: fps || undefined },
+      width: { exact: width || undefined },
+      height: { exact: height || undefined },
     },
     audio: false,
   });
 }
 
 async function loadScreenStream() {
-  return await navigator.mediaDevices.getDisplayMedia({
-    video: true,
-    audio: false,
-  });
+  const width = parseInt(getVideoDeviceResolution().split("x")[0]);
+  const height = parseInt(getVideoDeviceResolution().split("x")[1]);
+  return await getTransformedScreenStream({ width, height });
 }
 
 // utility functions
@@ -286,4 +313,141 @@ async function getAvailableCameraFPS() {
   const height = parseInt(currentResolution.split("x")[1]);
   const fps = await measureCameraFPSForResolution(width, height);
   return fps;
+}
+
+async function getAvailableScreenResolutions() {
+  const maxResolution = await getMaxScreenResolution();
+  const smallerResolutions = generateSmallerResolutions(maxResolution);
+  return smallerResolutions;
+}
+
+async function getAvailableScreenFPS() {
+  const maxFPS = await getMaxScreenFPS();
+  const lowerFPSOptions = generateLowerFPSOptions(maxFPS);
+
+  return lowerFPSOptions;
+}
+
+// bunch of annoying functions my brain died
+async function getMaxScreenResolution() {
+  try {
+    const isCurrenlyScreenSharing = getVideoSourceOption() === "screen";
+    if (!isCurrenlyScreenSharing) {
+      throw new Error("Not currently sharing screen");
+    }
+    const stream = await getScreenStreamInstance();
+
+    const track = stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+
+    return { width: settings.width, height: settings.height };
+  } catch (error) {
+    console.error("Error getting maximum screen resolution:", error);
+    return { width: 1920, height: 1080 }; // Default resolution if error occurs
+  }
+}
+
+function generateSmallerResolutions(maxResolution) {
+  const { width, height } = maxResolution;
+  const resolutions = [];
+
+  if (width >= 3840 && height >= 2160)
+    resolutions.push({ width: 3840, height: 2160 });
+  if (width >= 2560 && height >= 1440)
+    resolutions.push({ width: 2560, height: 1440 });
+  if (width >= 1920 && height >= 1080)
+    resolutions.push({ width: 1920, height: 1080 });
+  if (width >= 1600 && height >= 900)
+    resolutions.push({ width: 1600, height: 900 });
+  if (width >= 1366 && height >= 768)
+    resolutions.push({ width: 1366, height: 768 });
+  if (width >= 1280 && height >= 1024)
+    resolutions.push({ width: 1280, height: 1024 });
+  if (width >= 1280 && height >= 720)
+    resolutions.push({ width: 1280, height: 720 });
+  if (width >= 1024 && height >= 768)
+    resolutions.push({ width: 1024, height: 768 });
+  if (width >= 800 && height >= 600)
+    resolutions.push({ width: 800, height: 600 });
+  if (width >= 640 && height >= 480)
+    resolutions.push({ width: 640, height: 480 });
+  if (width >= 320 && height >= 240)
+    resolutions.push({ width: 320, height: 240 });
+
+  return resolutions;
+}
+
+function transformStreamToResolution(stream, targetResolution) {
+  const { width, height } = targetResolution;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  const video = document.createElement("video");
+  video.srcObject = stream;
+  video.play();
+
+  const fps = parseInt(getVideoDeviceFrameRate());
+  console.log({ fps });
+  const transformedStream = canvas.captureStream(fps || undefined);
+
+  video.addEventListener("play", () => {
+    const drawFrame = () => {
+      if (!video.paused && !video.ended) {
+        ctx.drawImage(video, 0, 0, width, height);
+        requestAnimationFrame(drawFrame);
+      }
+    };
+    drawFrame();
+  });
+
+  return transformedStream;
+}
+
+async function getTransformedScreenStream(preferredResolution) {
+  const maxResolution = await getMaxScreenResolution();
+  const smallerResolutions = generateSmallerResolutions(maxResolution);
+
+  // Simulate user selection
+  const userSelectedResolution =
+    smallerResolutions.find(
+      (res) =>
+        res.width === preferredResolution.width &&
+        res.height === preferredResolution.height
+    ) || maxResolution;
+
+  if (!userSelectedResolution) {
+    showPopup("Invalid resolution selected", "error");
+    return;
+  }
+
+  const stream = await getScreenStreamInstance();
+
+  const transformedStream = transformStreamToResolution(
+    stream,
+    userSelectedResolution
+  );
+
+  return transformedStream;
+}
+
+//
+async function getMaxScreenFPS() {
+  try {
+    const stream = await getScreenStreamInstance();
+
+    const track = stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    const maxFPS = settings.frameRate;
+
+    return maxFPS;
+  } catch (error) {
+    console.error("Error getting maximum screen FPS:", error);
+    return 30; // Default FPS if error occurs
+  }
+}
+
+function generateLowerFPSOptions(maxFPS) {
+  const possibleFPS = [120, 90, 60, 30, 15];
+  return possibleFPS.filter((fps) => fps <= maxFPS);
 }
