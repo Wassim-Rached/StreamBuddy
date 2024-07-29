@@ -2,7 +2,6 @@ const alertsContainer = document.getElementById("alerts-container");
 const copy_btn = document.getElementById("copy-btn");
 const connectionStatus = document.getElementById("connection-status");
 const chatBox = document.getElementById("chat-box");
-const remoteVideo = document.getElementById("remote-video");
 const isTypingIndicator = document.getElementById("is-typing-indicator");
 
 function showPopup(message, type) {
@@ -148,3 +147,5 @@ copy_btn.addEventListener("click", () => {
 //     button.textContent = "Full Screen";
 //   }
 // }
+
+//

@@ -10,6 +10,11 @@ const VideoDeviceResolutionOption = document.getElementById(
 );
 const localVideo = document.getElementById("local-video");
 
+// events
+const updatePeerConnectionWithNewVideoTrackEvent = new Event(
+  "updatePeerConnectionWithNewVideoTrack"
+);
+
 // variables
 let __localVideoStream;
 let __screenStreamInstance;
@@ -19,6 +24,15 @@ async function getLocalVideoStream() {
   if (!__localVideoStream) {
     const stream = await loadCurrentVideoSourceStream();
     __localVideoStream = stream;
+
+    //
+    window.dispatchEvent(updatePeerConnectionWithNewVideoTrackEvent);
+
+    const videoTrack = stream.getVideoTracks()[0];
+    videoTrack.onended = () => {
+      console.log("Video sharing ended");
+      turnOffVideoSharing();
+    };
   }
 
   return __localVideoStream;
@@ -35,16 +49,35 @@ async function getScreenStreamInstance() {
       audio: false,
     });
     __screenStreamInstance = stream;
+
+    //
+    const videoTrack = stream.getVideoTracks()[0];
+    videoTrack.onended = () => {
+      console.log("Screen sharing ended");
+      const currentStream = __localVideoStream;
+      const videoTrack = currentStream.getVideoTracks()[0];
+      videoTrack.stop();
+      clearScreenStreamInstance();
+    };
   }
   return __screenStreamInstance;
-}
-function setScreenStreamInstance(stream) {
-  __screenStreamHolder = stream;
 }
 function clearScreenStreamInstance() {
   if (!__screenStreamInstance) return;
   __screenStreamInstance.getTracks().forEach((track) => track.stop());
   __screenStreamInstance = null;
+}
+function getSilentVideoStream(frameRate = 5) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 480;
+
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const stream = canvas.captureStream(frameRate);
+  return stream;
 }
 function getVideoSourceOption() {
   return videoSourceOption.value;
@@ -80,6 +113,8 @@ async function getVideoSourceResolutions() {
       return [];
   }
 }
+
+// todo : changing between sources should refresh settings
 
 // Event bindings
 document.addEventListener("DOMContentLoaded", async () => {
@@ -156,6 +191,7 @@ async function getAvailableCameraDevices() {
 
 // event handlers
 async function handleVideoSourceChanged() {
+  clearScreenStreamInstance();
   clearLocalVideoStream();
 
   const videoSource = getVideoSourceOption();
@@ -202,21 +238,30 @@ async function loadCurrentVideoSourceStream() {
     case "screen":
       return await loadScreenStream();
     default:
-      return undefined;
+      return getSilentVideoStream();
   }
 }
 
 async function loadCameraStream() {
-  const width = parseInt(getVideoDeviceResolution().split("x")[0]);
-  const height = parseInt(getVideoDeviceResolution().split("x")[1]);
-  const fps = parseInt(getVideoDeviceFrameRate());
-  console.log(width, height, fps, getVideoDeviceId());
+  const width = parseInt(getVideoDeviceResolution().split("x")[0]) || undefined;
+  const height =
+    parseInt(getVideoDeviceResolution().split("x")[1]) || undefined;
+  const fps = parseInt(getVideoDeviceFrameRate()) || undefined;
+  const videoDeviceId = getVideoDeviceId() || undefined;
+
+  console.log("new camera stream with : ", {
+    width,
+    height,
+    fps,
+    videoDeviceId,
+  });
+
   return await navigator.mediaDevices.getUserMedia({
     video: {
-      deviceId: { exact: getVideoDeviceId() || undefined },
-      frameRate: { exact: fps || undefined },
-      width: { exact: width || undefined },
-      height: { exact: height || undefined },
+      deviceId: { exact: videoDeviceId },
+      frameRate: { exact: fps },
+      width: { exact: width },
+      height: { exact: height },
     },
     audio: false,
   });
@@ -450,4 +495,19 @@ async function getMaxScreenFPS() {
 function generateLowerFPSOptions(maxFPS) {
   const possibleFPS = [120, 90, 60, 30, 15];
   return possibleFPS.filter((fps) => fps <= maxFPS);
+}
+
+//
+async function updatePeerConnectionWithNewVideoTrack(peerConnection) {
+  const stream = await getLocalVideoStream();
+  const videoTrack = stream.getVideoTracks()[0];
+  const sender = peerConnection
+    .getSenders()
+    .find((s) => s.track.kind === "video");
+  sender.replaceTrack(videoTrack);
+}
+
+function turnOffVideoSharing() {
+  videoSourceOption.value = "none";
+  videoSourceOption.dispatchEvent(new Event("change"));
 }
