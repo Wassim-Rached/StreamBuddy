@@ -1,10 +1,5 @@
 const FILE_SHARE_CHUNK_SIZE = 16 * 1024; // 16 KB
 
-// const call_btn = document.getElementById("call-btn");
-// const shareChoice_select = document.getElementById("share-select");
-// const standby_video = document.getElementById("standby-video");
-// const mute_btn = document.getElementById("mute-btn");
-
 const incommingCallsContainer = document.getElementById(
   "incomming-calls-container"
 );
@@ -24,12 +19,8 @@ const sendMessageBtn = document.getElementById("send-message-btn");
 const sendFileBtn = document.getElementById("send-file-btn");
 const connectBtn = document.getElementById("connect-btn");
 
-// peerId_input.addEventListener("input", validatePeerIdInput);
-chatMessageInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    sendMessageBtn.click();
-  }
-});
+peerIdInput.addEventListener("input", validatePeerIdInput);
+chatMessageInput.addEventListener("keydown", handleChatMessageKeyDown);
 sendMessageBtn.addEventListener("click", sendChatMessage);
 
 const coreConnectionEstablishedSuccessfullyEvent = new CustomEvent(
@@ -38,10 +29,8 @@ const coreConnectionEstablishedSuccessfullyEvent = new CustomEvent(
 const coreConnectionHangupEvent = new CustomEvent("coreConnectionHangup");
 
 // varibles
-let amITheSender = undefined;
+let __amITheSender = undefined; //
 let peer; // represents the current user
-let currentStream; // represents the current stream
-let isMuted; // represents the current mute status
 
 let coreConnection; // used to connect both clients
 let voiceCall; // used for the voice data exchange
@@ -56,9 +45,6 @@ let incomingCalls; // represents the incoming calls list
 let outgoingCalls; // represents the outgoing calls list
 
 // event listeners
-// call_btn.addEventListener("click", call);
-// mute_btn.addEventListener("click", toggleMute);
-// shareChoice_select.addEventListener("change", toggleStream);
 window.addEventListener("load", init);
 hangupBtn.addEventListener("click", closeCoreConnection);
 sendFileBtn.addEventListener("click", sendFileRequest);
@@ -69,18 +55,35 @@ connectBtn.addEventListener("click", (e) =>
 
 // helpers
 function getAmiTheSender() {
-  if (amITheSender === undefined) {
+  if (__amITheSender === undefined) {
     console.error("amITheSender is not set");
   }
-  return amITheSender;
+  return __amITheSender;
 }
 
 function setAmITheSender(value) {
-  amITheSender = value;
+  __amITheSender = value;
 }
 
 function getOtherPeerId() {
   return peerIdInput.value;
+}
+
+function validatePeerIdInput() {
+  if (
+    peerIdInput.value.trim() === "" ||
+    peerIdInput.value === myIdInput.value
+  ) {
+    connectBtn.disabled = true;
+  } else {
+    connectBtn.disabled = false;
+  }
+}
+
+function handleChatMessageKeyDown(e) {
+  if (e.key === "Enter") {
+    sendMessageBtn.click();
+  }
 }
 
 // window events
@@ -162,16 +165,11 @@ function onCoreConnectionHangup() {
 async function init() {
   myIdInput.value = "";
   peer = new Peer();
-  // shareChoice_select.value = "none";
-  // currentStream = await getStreamByShareType();
-  isMuted = false;
   incomingCalls = new Map();
   outgoingCalls = new Map();
 
   // voice related
   audioCheckbox.checked = false;
-
-  // gotLocalStream(currentStream);
 
   peer.on("open", handlePeerConnectionOpen);
 
@@ -451,16 +449,6 @@ function closeVoiceCall() {
     voiceCall.close();
   }
 }
-
-// function updateVoiceCallPeerStreamWithNewTrack(oldTrack, newTrack) {
-//   if (!voiceCall) return;
-//   const senders = voiceCall.peerConnection.getSenders();
-//   senders.forEach((sender) => {
-//     if (sender.track === oldTrack) {
-//       sender.replaceTrack(newTrack);
-//     }
-//   });
-// }
 
 /*  
   End : Voice related functions
@@ -818,5 +806,3 @@ function closeChatConnection() {
     chatConnection.close();
   }
 }
-
-//

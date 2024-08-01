@@ -168,3 +168,10 @@ body {
 canvas {
   background-color: #000;
 }
+
+#connection-status {
+  width: 150px;
+  text-align: center;
+  margin-bottom: 0 !important;
+  padding: 8px !important;
+}

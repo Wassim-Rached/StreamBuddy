@@ -39,6 +39,8 @@ async function getLocalVideoStream() {
 }
 function clearLocalVideoStream() {
   if (!__localVideoStream) return;
+  const streamType = getVideoSourceOption();
+  console.log("Clearing local video stream for : ", streamType);
   __localVideoStream.getTracks().forEach((track) => track.stop());
   __localVideoStream = null;
 }
@@ -57,6 +59,7 @@ async function getScreenStreamInstance() {
       const currentStream = __localVideoStream;
       const videoTrack = currentStream.getVideoTracks()[0];
       videoTrack.stop();
+      videoTrack.dispatchEvent(new Event("ended"));
       clearScreenStreamInstance();
     };
   }
@@ -183,6 +186,12 @@ async function renderVideoSourceResolutions() {
   });
 }
 
+function resetSettings() {
+  videoDeviceInputOption.value = "";
+  videoDeviceFrameRateOption.value = "";
+  VideoDeviceResolutionOption.value = "";
+}
+
 // utility functions
 async function getAvailableCameraDevices() {
   const devices = await navigator.mediaDevices.enumerateDevices();
@@ -191,6 +200,7 @@ async function getAvailableCameraDevices() {
 
 // event handlers
 async function handleVideoSourceChanged() {
+  resetSettings();
   clearScreenStreamInstance();
   clearLocalVideoStream();
 

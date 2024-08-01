@@ -69,25 +69,9 @@ function pushAlert(message, type = "info") {
   }, 5000);
 }
 
-function validatePeerIdInput() {
-  if (!peerIdInput.value || peerIdInput.value === "") {
-    call_btn.disabled = true;
-    return;
-  }
-
-  console.log(peer && peer.id && peer.id == peerIdInput.value);
-
-  if (peer && peer.id && peer.id == peerIdInput.value) {
-    call_btn.disabled = true;
-    return;
-  }
-
-  call_btn.disabled = false;
-}
-
 function updateConnectionStatus(status) {
   connectionStatus.innerText = status;
-  connectionStatus.className = "alert text-center";
+  connectionStatus.className = "alert";
   if (status === "Connected") {
     connectionStatus.classList.add("alert-success");
   } else if (status === "Connection closed") {
