@@ -164,6 +164,8 @@ function onCoreConnectionHangup() {
 
 async function init() {
   myIdInput.value = "";
+  peerIdInput.value = "";
+  connectBtn.disabled = true;
   peer = new Peer();
   incomingCalls = new Map();
   outgoingCalls = new Map();
