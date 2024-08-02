@@ -37,23 +37,23 @@
     <script src="../js/footer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script defer>
-      async function fetchMarkdown() {
+      async function readMarkdownFile() {
         try {
-          const response = await fetch("../../readme.md");
+          const response = await fetch("/readme.md");
           if (!response.ok) {
-            throw new Error("Network response was not ok");
+            throw new Error(
+              `Failed to fetch the markdown file: ${response.statusText}`
+            );
           }
           const markdown = await response.text();
-
           const htmlContent = marked.parse(markdown);
-
           document.getElementById("content").innerHTML = htmlContent;
         } catch (error) {
-          console.error("Failed to fetch the markdown file:", error);
+          console.error("Error:", error);
         }
       }
 
-      fetchMarkdown();
+      document.addEventListener("DOMContentLoaded", readMarkdownFile);
     </script>
   </body>
 </html>
